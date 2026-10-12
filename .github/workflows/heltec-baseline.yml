@@ -1,0 +1,42 @@
+name: Heltec V3 upstream baseline
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/heltec-baseline.yml'
+      - 'firmware/**'
+
+jobs:
+  build-upstream:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - Heltec_v3_companion_radio_ble
+          - Heltec_v3_companion_radio_wifi
+    steps:
+      - name: Checkout official MeshCore
+        uses: actions/checkout@v4
+        with:
+          repository: meshcore-dev/MeshCore
+          ref: main # Baseline discovery only: replace with validated commit SHA before firmware modifications.
+          submodules: recursive
+          path: upstream
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PlatformIO
+        run: python -m pip install --upgrade platformio
+      - name: Build unmodified upstream
+        run: pio run -d upstream -e ${{ matrix.environment }}
+      - name: Upload firmware artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-${{ matrix.environment }}
+          path: |
+            upstream/.pio/build/${{ matrix.environment }}/*.bin
+          if-no-files-found: warn
