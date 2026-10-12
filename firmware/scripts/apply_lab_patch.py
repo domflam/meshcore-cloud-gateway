@@ -31,7 +31,10 @@ header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LA
       lab_targets_, 1, CLOUD_GATEWAY_POLL_INTERVAL_MS, 30000UL};
 #endif
   DataStore* _store;''', 'scheduler members')
-source = replace_once(source, '#include "MyMesh.h"', '#include "MyMesh.h"\\n#ifdef CLOUD_GATEWAY_LAB_POLL\\nconstexpr uint8_t MyMesh::kGatPublicKey[32];\\n#endif', 'static key definition')
+source = replace_once(source, '#include "MyMesh.h"', '''#include "MyMesh.h"
+#ifdef CLOUD_GATEWAY_LAB_POLL
+constexpr uint8_t MyMesh::kGatPublicKey[32];
+#endif''', 'static key definition')
 source = replace_once(source, 'void MyMesh::onContactResponse(const ContactInfo &contact, const uint8_t *data, uint8_t len) {\n  uint32_t tag;', '''void MyMesh::onContactResponse(const ContactInfo &contact, const uint8_t *data, uint8_t len) {
   if (len < 4) return;
   uint32_t tag;''', 'response length guard')
