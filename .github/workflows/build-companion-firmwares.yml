@@ -11,6 +11,7 @@ on:
 
 jobs:
   build-companion-firmwares:
+    if: github.repository == 'meshcore-dev/MeshCore'
     uses: ./.github/workflows/firmware-builder.yml
     with:
       firmware_type: 'companion'

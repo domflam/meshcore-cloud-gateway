@@ -13,6 +13,7 @@ on:
 jobs:
 
   generate-build-matrix:
+    if: github.repository == 'meshcore-dev/MeshCore'
     runs-on: ubuntu-latest
     outputs:
       targets: ${{ steps.get-build-targets.outputs.targets }}
@@ -37,6 +38,7 @@ jobs:
           echo "targets=$JSON_ARRAY" >> $GITHUB_OUTPUT
 
   build:
+    if: github.repository == 'meshcore-dev/MeshCore'
     needs: generate-build-matrix
     runs-on: ubuntu-latest
     continue-on-error: true # don't fail entire build if one board fails to build
@@ -66,7 +68,7 @@ jobs:
   create-release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') # only create release for tagged builds
+    if: github.repository == 'meshcore-dev/MeshCore' && startsWith(github.ref, 'refs/tags/')
     steps:
 
       - name: Clone Repo
