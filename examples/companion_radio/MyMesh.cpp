@@ -674,6 +674,12 @@ uint8_t MyMesh::onContactRequest(const ContactInfo &contact, uint32_t sender_tim
 }
 
 void MyMesh::onContactResponse(const ContactInfo &contact, const uint8_t *data, uint8_t len) {
+  if (len < 4) return;
+#ifdef ENABLE_CLOUD_GATEWAY
+  // Dispatch before legacy login/status matching, which only checks a key prefix.
+  if (gateway_scheduler && gateway_scheduler->onResponse(contact.id.pub_key, data, len,
+                                                        millis(), getRTCClock()->getCurrentTime())) return;
+#endif
   uint32_t tag;
   memcpy(&tag, data, 4);
 
@@ -1243,6 +1249,11 @@ void MyMesh::handleCmdFrame(size_t len) {
     uint32_t curr = getRTCClock()->getCurrentTime();
     if (secs >= curr) {
       getRTCClock()->setCurrentTime(secs);
+#ifdef ENABLE_CLOUD_GATEWAY
+      // Contacts can bootstrap a stale RTC. Require a fresh app time command
+      // each boot until the Wi-Fi/SNTP milestone supplies an independent clock.
+      gateway_clock_ready = secs >= 1735689600UL; // 2025-01-01
+#endif
       writeOKFrame();
     } else {
       writeErrFrame(ERR_CODE_ILLEGAL_ARG);

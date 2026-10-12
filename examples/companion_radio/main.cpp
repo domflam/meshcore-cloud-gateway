@@ -103,6 +103,11 @@ MyMesh the_mesh(radio_driver, fast_rng, rtc_clock, tables, store
 
 /* END GLOBAL OBJECTS */
 
+#ifdef ENABLE_CLOUD_GATEWAY
+#include "gateway/GatewayRuntime.h"
+gateway::GatewayRuntime cloud_gateway(the_mesh);
+#endif
+
 void halt() {
   while (1) ;
 }
@@ -242,10 +247,16 @@ void setup() {
 #endif
 
   board.onBootComplete();
+#ifdef ENABLE_CLOUD_GATEWAY
+  cloud_gateway.begin();
+#endif
 }
 
 void loop() {
   the_mesh.loop();
+#ifdef ENABLE_CLOUD_GATEWAY
+  cloud_gateway.loop();
+#endif
   interface_manager.loop();
   sensors.loop();
 #ifdef DISPLAY_CLASS

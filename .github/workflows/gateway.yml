@@ -1,0 +1,49 @@
+name: Gateway POC
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gateway-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scheduler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test scheduler with address and undefined-behavior sanitizers
+        run: |
+          c++ -std=c++11 -Wall -Wextra -Werror -fsanitize=address,undefined tests/gateway/scheduler_test.cpp -o /tmp/scheduler-test
+          /tmp/scheduler-test
+  firmware:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [Heltec_v3_companion_radio_ble, Heltec_v3_cloud_gateway_ble]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ matrix.environment }}-${{ hashFiles('platformio.ini', 'variants/heltec_v3/platformio.ini') }}
+      - run: pip install platformio==6.2.0
+      - run: pio run -e ${{ matrix.environment }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.environment }}
+          path: |
+            .pio/build/${{ matrix.environment }}/firmware.bin
+            .pio/build/${{ matrix.environment }}/firmware.elf
+            .pio/build/${{ matrix.environment }}/firmware-merged.bin
+          if-no-files-found: error

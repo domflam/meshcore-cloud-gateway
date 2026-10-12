@@ -1,128 +1,127 @@
-## About MeshCore
+# meshcore-cloud-gateway
 
-MeshCore is a lightweight, portable C++ library that enables multi-hop packet routing for embedded projects using LoRa and other packet radios. It is designed for developers who want to create resilient, decentralized communication networks that work without the internet.
+Passerelle météo pour **Heltec V3**, basée sur MeshCore Companion BLE.
+Objectif : interroger les repeaters, publier vers Cloud Run, puis alimenter
+le stockage et l'application météo.
 
-## 🔍 What is MeshCore?
+**POC-01 : collecte radio autonome après configuration et mise à l'heure.**
+Ce jalon conserve l'application mobile et produit des mesures LPP brutes dans
+la console USB. Wi-Fi, HTTPS et Cloud Run sont les jalons suivants.
+La coexistence sur matériel doit encore être validée.
 
-MeshCore now supports a range of LoRa devices, allowing for easy flashing without the need to compile firmware manually. Users can flash a pre-built binary using tools like Adafruit ESPTool and interact with the network through a serial console.
-MeshCore provides the ability to create wireless mesh networks, similar to Meshtastic and Reticulum but with a focus on lightweight multi-hop packet routing for embedded projects. Unlike Meshtastic, which is tailored for casual LoRa communication, or Reticulum, which offers advanced networking, MeshCore balances simplicity with scalability, making it ideal for custom embedded solutions, where devices (nodes) can communicate over long distances by relaying messages through intermediate nodes. This is especially useful in off-grid, emergency, or tactical situations where traditional communication infrastructure is unavailable.
+## Base officielle
 
-## ⚡ Key Features
+- Source : [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore).
+- Révision : `a366955cb2f67b8e6842d4f00d2b6a554dddd88a` (30 septembre 2026).
+- Cible d'origine : `Heltec_v3_companion_radio_ble`.
+- Nouvelle cible : `Heltec_v3_cloud_gateway_ble`.
+- Documentation originale : [README.upstream.md](README.upstream.md).
+- Les licences et mentions du projet d'origine sont conservées.
 
-* Multi-Hop Packet Routing
-  * Devices can forward messages across multiple nodes, extending range beyond a single radio's reach.
-  * Supports up to a configurable number of hops to balance network efficiency and prevent excessive traffic.
-  * Nodes use fixed roles where "Companion" nodes are not repeating messages at all to prevent adverse routing paths from being used.
-* Supports LoRa Radios – Works with Heltec, RAK Wireless, and other LoRa-based hardware.
-* Decentralized & Resilient – No central server or internet required; the network is self-healing.
-* Low Power Consumption – Ideal for battery-powered or solar-powered devices.
-* Simple to Deploy – Pre-built example applications make it easy to get started.
+## Comportement
 
-## 🎯 What Can You Use MeshCore For?
+- Aucun contact configuré par défaut : aucune interrogation automatique.
+- Jusqu'à huit clés publiques complètes, configurées localement.
+- Une seule requête automatique en vol, sans attente bloquante.
+- Délai de démarrage de 30 secondes, puis attente de la mise à l'heure par l'app.
+- Cibles interrogées successivement, avec cinq secondes entre deux cibles.
+- Nouvelle tournée 15 minutes après la fin de la précédente.
+- Timeout estimé par MeshCore + deux secondes, plafonné à 302 secondes.
+- Après un échec, passage à la cible suivante ; nouvelle tentative à la tournée
+  suivante, sans retransmissions rapprochées.
+- Corrélation indépendante par tag **et clé publique complète**, sans toucher
+  aux états `pending_*` du Companion.
+- Conservation des 16 dernières requêtes pour absorber réponses tardives et doublons.
+- File RAM de huit mesures ; si pleine, la nouvelle mesure est abandonnée et
+  `dropped` augmente. Cette file volatile n'est pas un stockage durable.
 
-* Off-Grid Communication: Stay connected even in remote areas.
-* Emergency Response & Disaster Recovery: Set up instant networks where infrastructure is down.
-* Outdoor Activities: Hiking, camping, and adventure racing communication.
-* Tactical & Security Applications: Military, law enforcement, and private security use cases.
-* IoT & Sensor Networks: Collect data from remote sensors and relay it back to a central location.
+## Configuration et compilation
 
-## 🚀 How to Get Started
+Installer PlatformIO Core (la CI utilise 6.2.0), puis copier
+`examples/companion_radio/gateway/gateway.example.h` vers `gateway.local.h`
+dans le même dossier. Ce fichier local est ignoré par Git.
 
-- Watch the [MeshCore QuickStart Playlist](https://www.youtube.com/watch?v=iaFltojJrAc&list=PLshzThxhw4O4WU_iZo3NmNZOv6KMrUuF9) by The Comms Channel
-- Watch the [MeshCore Technical Presentation](https://www.youtube.com/watch?v=OwmkVkZQTf4) by Liam Cottle.
-- Read through our [Frequently Asked Questions](./docs/faq.md) and [Documentation](https://docs.meshcore.io).
-- Flash the MeshCore firmware on a supported device.
-- Connect with a supported client.
+Remplacer l'exemple par les clés **publiques** des contacts RAK et GAT,
+64 caractères hexadécimaux chacune :
 
-For developers:
-
-- Install [PlatformIO](https://docs.platformio.org) in [Visual Studio Code](https://code.visualstudio.com).
-- Clone and open the MeshCore repository in Visual Studio Code.
-- See the example applications you can modify and run:
-  - [Companion Radio](./examples/companion_radio) - For use with an external chat app, over BLE, USB or Wi-Fi.
-  - [KISS Modem](./examples/kiss_modem) - Serial KISS protocol bridge for host applications. ([protocol docs](./docs/kiss_modem_protocol.md))
-  - [Simple Repeater](./examples/simple_repeater) - Extends network coverage by relaying messages.
-  - [Simple Room Server](./examples/simple_room_server) - A simple BBS server for shared Posts.
-  - [Simple Secure Chat](./examples/simple_secure_chat) - Secure terminal based text communication between devices.
-  - [Simple Sensor](./examples/simple_sensor) - Remote sensor node with telemetry and alerting.
-
-The Simple Secure Chat example can be interacted with through the Serial Monitor in Visual Studio Code, or with a Serial USB Terminal on Android.
-
-## ⚡️ MeshCore Flasher
-
-We have prebuilt firmware ready to flash on supported devices.
-
-- Launch https://meshcore.io/flasher
-- Select a supported device
-- Flash one of the firmware types:
-  - Companion, Repeater or Room Server
-- Once flashing is complete, you can connect with one of the MeshCore clients below.
-
-## 📱 MeshCore Clients
-
-**Companion Firmware**
-
-The companion firmware can be connected to via BLE, USB or Wi-Fi depending on the firmware type you flashed.
-
-- Web: https://app.meshcore.nz
-- Android: https://play.google.com/store/apps/details?id=com.liamcottle.meshcore.android
-- iOS: https://apps.apple.com/us/app/meshcore/id6742354151?platform=iphone
-- NodeJS: https://github.com/liamcottle/meshcore.js
-- Python: https://github.com/fdlamotte/meshcore-cli
-
-**Repeater and Room Server Firmware**
-
-The repeater and room server firmware can be set up via USB in the web config tool.
-
-- https://config.meshcore.io
-
-They can also be managed via LoRa in the mobile app by using the Remote Management feature.
-
-## 🛠 Hardware Compatibility
-
-MeshCore is designed for devices listed in the [MeshCore Flasher](https://meshcore.io/flasher)
-
-## 📜 License
-
-MeshCore is open-source software released under the MIT License. You are free to use, modify, and distribute it for personal and commercial projects.
-
-## Contributing
-
-Please submit PR's using 'dev' as the base branch!
-For minor changes just submit your PR and we'll try to review it, but for anything more 'impactful' please open an Issue first and start a discussion. It is better to sound out what it is you want to achieve first, and try to come to a consensus on what the best approach is, especially when it impacts the structure or architecture of this codebase.
-
-Here are some general principles you should try to adhere to:
-* Keep it simple. Please, don't think like a high-level lang programmer. Think embedded, and keep code concise, without any unnecessary layers.
-* No dynamic memory allocation, except during setup/begin functions.
-* Use the same brace and indenting style that's in the core source modules. (A .clang-format is probably going to be added soon, but please do NOT retroactively re-format existing code. This just creates unnecessary diffs that make finding problems harder)
-
-Help us prioritize! Please react with thumbs-up to issues/PRs you care about most. We look at reaction counts when planning work.
-
-### Running unit tests
-
-To run unit tests, run the following command:
-
-```bash
-pio test --environment native --verbose
+```cpp
+#define GATEWAY_TARGET_KEYS { \
+  "CLE_PUBLIQUE_COMPLETE_DU_RAK", \
+  "CLE_PUBLIQUE_COMPLETE_DU_GAT" \
+}
+#define GATEWAY_INTERVAL_MS 900000UL
 ```
 
-## Road-Map / To-Do
+Ces chaînes sont des emplacements à remplacer, pas des clés valides. Un format
+invalide ou un doublon augmente `invalid_targets` et est ignoré. Ne jamais utiliser
+la clé privée du Companion. Sans fichier local, la cible compile avec une liste vide.
 
-There are a number of fairly major features in the pipeline, with no particular time-frames attached yet. In very rough chronological order:
-- [X] Companion radio: UI redesign
-- [X] Repeater + Room Server: add ACL's (like Sensor Node has)
-- [X] Standardise Bridge mode for repeaters
-- [ ] Repeater/Bridge: Standardise the Transport Codes for zoning/filtering
-- [X] Core + Repeater: enhanced zero-hop neighbour discovery
-- [ ] Core: round-trip manual path support
-- [ ] Companion + Apps: support for multiple sub-meshes (and 'off-grid' client repeat mode)
-- [ ] Core + Apps: support for LZW message compression
-- [ ] Core: dynamic CR (Coding Rate) for weak vs strong hops
-- [ ] Core: new framework for hosting multiple virtual nodes on one physical device
-- [ ] V2 protocol spec: discussion and consensus around V2 packet protocol, including path hashes, new encryption specs, etc
+```sh
+pio run -e Heltec_v3_cloud_gateway_ble
+```
 
-## 📞 Get Support
+Le résultat est dans `.pio/build/Heltec_v3_cloud_gateway_ble/`. Les firmwares de CI
+ont une liste vide : compiler avec sa configuration locale pour une collecte réelle.
 
-- Report bugs and request features on the [GitHub Issues](https://github.com/ripplebiz/MeshCore/issues) page.
-- Find additional guides and components on [my site](https://buymeacoffee.com/ripplebiz).
-- Join [MeshCore Discord](https://meshcore.gg) to chat with the developers and get help from the community.
+## Essai sur la Heltec
+
+1. Sauvegarder l'identité et les réglages utiles avec les moyens habituels de l'app.
+   La même identité publique doit rester autorisée sur les repeaters.
+2. Flasher sans effacement complet :
+   `pio run -e Heltec_v3_cloud_gateway_ble -t upload`.
+3. Connecter l'app BLE, vérifier les contacts, les réglages radio et la télémétrie
+   manuelle de chaque repeater. Le rôle invité n'expose que la télémétrie de base ;
+   cette identité doit disposer des permissions nécessaires aux capteurs météo.
+4. Mettre l'horloge à jour avec le client Companion. Le firmware attend une commande
+   `CMD_SET_DEVICE_TIME` acceptée pendant ce démarrage. Si l'app ne la transmet pas
+   automatiquement, utiliser un client offrant la synchronisation.
+5. Ouvrir `pio device monitor -e Heltec_v3_cloud_gateway_ble`. Le statut doit afficher
+   `clock_ready: true`, le nombre de cibles et zéro `invalid_targets`.
+6. Déconnecter le téléphone et vérifier les tournées suivantes. Reconnecter ensuite
+   l'app et demander statut/télémétrie pendant une tournée automatique.
+
+**Après chaque redémarrage, une nouvelle mise à l'heure via le client est nécessaire.**
+L'ESP32 peut démarrer avec une heure ancienne, et les repeaters rejettent les tags
+temporels qui n'avancent pas. L'heure restaurée à partir des contacts ne suffit pas
+à autoriser le scheduler. La mise à l'heure réseau appartient au jalon Wi-Fi :
+ce POC n'est pas encore autonome après coupure d'alimentation.
+
+Les logs gateway sont des lignes JSON avec le champ `gateway`. Des logs MeshCore
+peuvent apparaître sur la même console. Le POC utilise le BLE pour le protocole
+Companion et l'USB pour les diagnostics texte : ne pas ajouter `ENABLE_USB_INTERFACE`
+à cette cible sans séparer les deux flux.
+
+Une mesure contient `public_key`, `tag`, `received_at` (heure de réception sur la
+passerelle, pas heure de mesure) et `lpp_hex`. Le futur décodeur devra conserver le
+type et le canal LPP, pour distinguer notamment température interne et température
+du capteur d'environnement.
+
+## Validation
+
+Tests sur ordinateur avec détection d'erreurs mémoire :
+
+```sh
+c++ -std=c++11 -Wall -Wextra -Werror -fsanitize=address,undefined \
+  tests/gateway/scheduler_test.cpp -o /tmp/scheduler-test
+/tmp/scheduler-test
+```
+
+Ils couvrent les clés, l'horloge préalable, la corrélation, la copie des buffers,
+les doublons, les réponses tardives, les timeouts, les erreurs d'envoi, la saturation
+de file et le débordement de `millis()`. La CI compile aussi le Companion BLE d'origine
+et la cible gateway. Les anciennes automatisations de publication restent réservées
+au dépôt MeshCore officiel.
+
+La validation matérielle doit encore couvrir les deux repeaters, la collecte sans
+téléphone après mise à l'heure, les commandes mobiles pendant une collecte, l'absence
+d'un repeater et le redémarrage. Relever les compteurs de pertes/timeouts et les
+délais de traitement LoRa.
+
+## Suite
+
+1. Wi-Fi, reconnexion et SNTP, avec BLE actif.
+2. HTTPS dans une tâche dédiée, alimentée par une queue bornée par copie.
+3. Cloud Run : contrat d'ingestion, authentification, dédoublonnage et décodage LPP.
+4. Essais BLE + LoRa + TLS : mémoire, latence de boucle, pertes et récupération réseau.
+
+Voir [l'architecture](docs/cloud-gateway.md) pour les points d'intégration.

@@ -70,6 +70,10 @@
 #include <helpers/BaseChatMesh.h>
 #include <helpers/TransportKeyStore.h>
 
+#ifdef ENABLE_CLOUD_GATEWAY
+#include "gateway/TelemetryScheduler.h"
+#endif
+
 /* -------------------------------------------------------------------------------------- */
 
 #define REQ_TYPE_GET_STATUS             0x01 // same as _GET_STATS
@@ -99,6 +103,15 @@ public:
   void handleCmdFrame(size_t len);
   bool advert();
   void enterCLIRescue();
+
+#ifdef ENABLE_CLOUD_GATEWAY
+  void setGatewayScheduler(gateway::TelemetryScheduler* scheduler) { gateway_scheduler = scheduler; }
+  bool gatewayClockReady() const { return gateway_clock_ready; }
+private:
+  gateway::TelemetryScheduler* gateway_scheduler = nullptr;
+  bool gateway_clock_ready = false;
+public:
+#endif
 
   int  getRecentlyHeard(AdvertPath dest[], int max_num);
 
