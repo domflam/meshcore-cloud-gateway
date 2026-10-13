@@ -41,6 +41,7 @@ jobs:
           old = '  ${Heltec_lora32_v3.build_flags}'
           assert section.count(old) == 1
           section = section.replace(old, old + '\n  -D CLOUD_GATEWAY_LAB_POLL=1\n  -D CLOUD_GATEWAY_POLL_INTERVAL_MS=60000', 1)
+          section = section.replace('  densaugeo/base64 @ ~1.4.0', '  densaugeo/base64 @ ~1.4.0\n  WiFi\n  WebServer\n  DNSServer\n  Preferences', 1)
           p.write_text(before + header + section + '[env:' + rest)
           PY
       - name: Compile WiFi gateway
