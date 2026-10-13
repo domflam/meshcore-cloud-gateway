@@ -10,10 +10,20 @@ class InspectTelemetryTests(unittest.TestCase):
     def test_gat562_golden_capture(self):
         result = inspect("0174019b016700d400000000")
         self.assertEqual(result["length_bytes"], 12)
-        self.assertEqual(result["hex"], "0174019b016700d400000000")
-        self.assertEqual(len(result["octets"]), 12)
-        self.assertEqual(result["uint16_be_candidates"], [372, 411, 359, 212, 0, 0])
-        self.assertIn("unknown", result["interpretation"])
+        self.assertEqual(result["data_points"], [
+            {"channel": 1, "type": "voltage_v", "value": 4.11},
+            {"channel": 1, "type": "temperature_c", "value": 21.2},
+        ])
+        self.assertEqual(result["unparsed_suffix_hex"], "00000000")
+
+    def test_negative_temperature(self):
+        result = inspect("0167ff9c")
+        self.assertEqual(result["data_points"][0]["value"], -10.0)
+
+    def test_truncated_record(self):
+        result = inspect("017401")
+        self.assertEqual(result["data_points"], [])
+        self.assertEqual(result["unparsed_suffix_hex"], "017401")
 
     def test_invalid_hex(self):
         for sample in ("123", "xx", "01:02"):
