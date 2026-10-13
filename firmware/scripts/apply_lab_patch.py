@@ -22,7 +22,7 @@ header = replace_once(header, '#include "AbstractUITask.h"', '#include "Abstract
 header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LAB_POLL
   static const uint8_t kGatPublicKey[32];
   cloud_gateway::PollTarget lab_targets_[1] = {{"GAT562-01", kGatPublicKey, 32}};
-  cloud_gateway::TelemetryScheduler lab_scheduler_{
+  uint32_t cloud_event_sequence_ = 0;\n  cloud_gateway::TelemetryScheduler lab_scheduler_{
       lab_targets_, 1, CLOUD_GATEWAY_POLL_INTERVAL_MS, 30000UL};
 #endif
   DataStore* _store;''', 'scheduler members')
@@ -55,6 +55,31 @@ source = replace_once(source, '''  memcpy(&tag, data, 4);
       Serial.printf("[GATEWAY] GAT562 undecoded_bytes=%u\\n",
                     (unsigned)(size_t(len - 4) - decoded.parsed_bytes));
     }
+#ifdef CLOUD_GATEWAY_LAB_UPLINK
+    if (decoded.has_voltage || decoded.has_temperature) {
+      const time_t utc = time(nullptr);
+      if (utc >= 1700000000) {
+        struct tm utc_tm;
+        gmtime_r(&utc, &utc_tm);
+        char timestamp[25];
+        strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &utc_tm);
+        gateway_cloud::Reading reading;
+        reading.node_id = "GAT562-01";
+        reading.observed_at = timestamp;
+        reading.event_id = String("gat562-") + String((unsigned long)utc) + "-" +
+                           String((unsigned long)tag, HEX) + "-" +
+                           String(++cloud_event_sequence_);
+        reading.has_voltage = decoded.has_voltage;
+        reading.has_temperature = decoded.has_temperature;
+        reading.voltage_v = decoded.voltage_v;
+        reading.temperature_c = decoded.temperature_c;
+        if (!gateway_cloud::enqueue(reading))
+          Serial.println("[CLOUD] Reading not queued");
+      } else {
+        Serial.println("[CLOUD] UTC unavailable; skipping upload queue");
+      }
+    }
+#endif
     lab_scheduler_.markReply(millis(), tag);
     return;
   }
@@ -96,6 +121,7 @@ source = replace_once(source, '''void MyMesh::loop() {
     }
   }
 #endif''', 'loop')
+header = replace_once(header, '#include "TelemetryDecoder.h"', '#include "TelemetryDecoder.h"\\n#ifdef CLOUD_GATEWAY_LAB_UPLINK\\n#include "GatewayCloudUplink.h"\\n#include <time.h>\\n#endif', 'cloud include')
 cpp.write_text(source)
 hdr.write_text(header)
 print("Applied LAB telemetry patch to", root)
