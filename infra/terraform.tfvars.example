@@ -1,0 +1,6 @@
+project_id          = "meshcore-cloud-gateway"
+region              = "europe-west1"
+dataset_id          = "meshcore"
+container_image     = "europe-west1-docker.pkg.dev/meshcore-cloud-gateway/meshcore/ingestion:latest"
+deploy_service      = false
+allow_public_ingress = false
