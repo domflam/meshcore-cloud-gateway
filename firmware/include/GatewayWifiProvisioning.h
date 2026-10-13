@@ -10,6 +10,7 @@ static WebServer portal(80);
 static DNSServer dns;
 static Preferences prefs;
 static bool ap_active = false;
+static bool manual_setup = false;
 static bool time_sync_started = false;
 static bool has_credentials = false;
 static unsigned long disconnected_since = 0;
@@ -91,6 +92,12 @@ static void startPortal() {
   Serial.printf("[WIFI] Setup AP %s at %s\n", kApSsid, WiFi.softAPIP().toString().c_str());
 }
 
+static void openSetupPortal() {
+  manual_setup = true;
+  startPortal();
+  Serial.println("[WIFI] Manual setup active; reboot to close");
+}
+
 static void begin() {
   prefs.begin("gateway-wifi", false);
   String ssid = prefs.getString("ssid", "");
@@ -118,7 +125,7 @@ static void loop() {
       Serial.println("[CLOUD] SNTP started");
     }
 #endif
-    if (ap_active) {
+    if (ap_active && !manual_setup) {
       portal.stop();
       dns.stop();
       WiFi.softAPdisconnect(true);
