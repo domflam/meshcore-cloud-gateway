@@ -12,7 +12,7 @@ struct Reading {
   String event_id;
   String node_id;
   String observed_at;
-  float voltage_v;
+  bool has_voltage = false;\n  bool has_temperature = false;\n  float voltage_v;
   float temperature_c;
 };
 static constexpr size_t kCapacity = 16;
