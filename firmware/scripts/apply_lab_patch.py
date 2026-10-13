@@ -121,7 +121,7 @@ source = replace_once(source, '''void MyMesh::loop() {
     }
   }
 #endif''', 'loop')
-header = replace_once(header, '#include "TelemetryDecoder.h"', '#include "TelemetryDecoder.h"\\n#ifdef CLOUD_GATEWAY_LAB_UPLINK\\n#include "GatewayCloudUplink.h"\\n#include <time.h>\\n#endif', 'cloud include')
+header = replace_once(header, '#include "TelemetryDecoder.h"', '#include "TelemetryDecoder.h"\n#ifdef CLOUD_GATEWAY_LAB_UPLINK\n#include "GatewayCloudUplink.h"\n#include <time.h>\n#endif', 'cloud include')
 cpp.write_text(source)
 hdr.write_text(header)
 print("Applied LAB telemetry patch to", root)
