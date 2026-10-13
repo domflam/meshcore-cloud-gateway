@@ -10,6 +10,7 @@ static WebServer portal(80);
 static DNSServer dns;
 static Preferences prefs;
 static bool ap_active = false;
+static bool time_sync_started = false;
 static bool has_credentials = false;
 static unsigned long disconnected_since = 0;
 static constexpr unsigned long kFallbackMs = 60000UL;
@@ -110,6 +111,13 @@ static void begin() {
 static void loop() {
   if (WiFi.status() == WL_CONNECTED) {
     disconnected_since = 0;
+#ifdef CLOUD_GATEWAY_LAB_UPLINK
+    if (!time_sync_started) {
+      configTime(0, 0, "pool.ntp.org", "time.google.com");
+      time_sync_started = true;
+      Serial.println("[CLOUD] SNTP started");
+    }
+#endif
     if (ap_active) {
       portal.stop();
       dns.stop();
