@@ -20,12 +20,7 @@ def replace_once(text, old, new, label):
 
 header = replace_once(header, '#include "AbstractUITask.h"', '#include "AbstractUITask.h"\n#ifdef CLOUD_GATEWAY_LAB_POLL\n#include "TelemetryScheduler.h"\n#endif', 'header include')
 header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LAB_POLL
-  static constexpr uint8_t kGatPublicKey[32] = {
-      0x26,0xb5,0x98,0x6e,0xc5,0x21,0xb6,0x2b,
-      0x98,0x11,0x68,0x85,0x13,0xf9,0xa7,0x20,
-      0xb5,0x24,0x5c,0xd9,0x44,0x8f,0x90,0xd4,
-      0xcb,0xe3,0xe0,0xca,0x23,0xc8,0x17,0xca
-  };
+  static const uint8_t kGatPublicKey[32];
   cloud_gateway::PollTarget lab_targets_[1] = {{"GAT562-01", kGatPublicKey, 32}};
   cloud_gateway::TelemetryScheduler lab_scheduler_{
       lab_targets_, 1, CLOUD_GATEWAY_POLL_INTERVAL_MS, 30000UL};
@@ -33,7 +28,7 @@ header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LA
   DataStore* _store;''', 'scheduler members')
 source = replace_once(source, '#include "MyMesh.h"', '''#include "MyMesh.h"
 #ifdef CLOUD_GATEWAY_LAB_POLL
-constexpr uint8_t MyMesh::kGatPublicKey[32];
+const uint8_t MyMesh::kGatPublicKey[32] = {\n  0x26,0xb5,0x98,0x6e,0xc5,0x21,0xb6,0x2b,\n  0x98,0x11,0x68,0x85,0x13,0xf9,0xa7,0x20,\n  0xb5,0x24,0x5c,0xd9,0x44,0x8f,0x90,0xd4,\n  0xcb,0xe3,0xe0,0xca,0x23,0xc8,0x17,0xca\n};
 #endif''', 'static key definition')
 source = replace_once(source, 'void MyMesh::onContactResponse(const ContactInfo &contact, const uint8_t *data, uint8_t len) {\n  uint32_t tag;', '''void MyMesh::onContactResponse(const ContactInfo &contact, const uint8_t *data, uint8_t len) {
   if (len < 4) return;
