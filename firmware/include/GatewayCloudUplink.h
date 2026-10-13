@@ -3,8 +3,6 @@
 // HTTPS is deliberately disabled until a safe device authentication path exists.
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <HTTPClient.h>
 #include <Preferences.h>
 
 namespace gateway_cloud {
