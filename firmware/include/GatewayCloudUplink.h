@@ -16,12 +16,22 @@ struct Reading {
   float voltage_v = 0, temperature_c = 0;
 };
 static constexpr size_t kCapacity = 16;
-static Reading queue[kCapacity];
-static size_t head = 0, count = 0;
-static uint32_t next_attempt_ms = 0;
-static uint8_t failures = 0;
-static String endpoint, token, ca_pem;
-static bool enabled = false, configured = false;
+// Shared storage: defined once in main.cpp, referenced from MyMesh.cpp.
+#ifdef GATEWAY_CLOUD_DEFINE_STORAGE
+Reading queue[kCapacity];
+size_t head = 0, count = 0;
+uint32_t next_attempt_ms = 0;
+uint8_t failures = 0;
+String endpoint, token, ca_pem;
+bool enabled = false, configured = false;
+#else
+extern Reading queue[kCapacity];
+extern size_t head, count;
+extern uint32_t next_attempt_ms;
+extern uint8_t failures;
+extern String endpoint, token, ca_pem;
+extern bool enabled, configured;
+#endif
 static void begin() {
   Preferences p;
   p.begin("gateway-cloud", true);
