@@ -93,7 +93,7 @@ resource "google_cloud_run_v2_service" "ingestion" {
   project  = var.project_id
   name     = "meshcore-ingestion"
   location = var.region
-  ingress  = var.allow_public_ingress ? "INGRESS_TRAFFIC_ALL" : "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  ingress  = "INGRESS_TRAFFIC_ALL" # IAM requires authentication unless public_invoker is enabled
 
   template {
     service_account = google_service_account.ingestion.email
