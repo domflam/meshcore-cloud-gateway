@@ -16,7 +16,7 @@ def weather():
     # Table name comes from deployment configuration, never from user input.
     sql = f"""
         SELECT node_id, observed_at, voltage_v, temperature_c
-        FROM \`{TABLE}\`
+        FROM `{TABLE}`
         WHERE observed_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
         ORDER BY observed_at DESC
         LIMIT 300
