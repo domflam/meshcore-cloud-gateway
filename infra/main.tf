@@ -41,10 +41,10 @@ resource "google_bigquery_table" "telemetry" {
   table_id            = "telemetry"
   deletion_protection = true
 
+  require_partition_filter = true
   time_partitioning {
-    type                     = "DAY"
-    field                    = "observed_at"
-    require_partition_filter = true
+    type  = "DAY"
+    field = "observed_at"
   }
   clustering = ["node_id"]
   schema = jsonencode([
