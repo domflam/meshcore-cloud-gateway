@@ -27,6 +27,7 @@ jobs:
         shell: bash
         run: |
           cp gateway/firmware/include/TelemetryScheduler.h upstream/examples/companion_radio/TelemetryScheduler.h
+          cp gateway/firmware/include/TelemetryDecoder.h upstream/examples/companion_radio/TelemetryDecoder.h
           python gateway/firmware/scripts/apply_lab_patch.py upstream
           python - <<'PY'
           from pathlib import Path
