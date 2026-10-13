@@ -18,7 +18,7 @@ def replace_once(text, old, new, label):
         raise SystemExit(f"{label}: expected one anchor, found {count}")
     return text.replace(old, new, 1)
 
-header = replace_once(header, '#include "AbstractUITask.h"', '#include "AbstractUITask.h"\n#ifdef CLOUD_GATEWAY_LAB_POLL\n#include "TelemetryScheduler.h"\n#endif', 'header include')
+header = replace_once(header, '#include "AbstractUITask.h"', '#include "AbstractUITask.h"\n#ifdef CLOUD_GATEWAY_LAB_POLL\n#include "TelemetryScheduler.h"\n#include "TelemetryDecoder.h"\n#endif', 'header include')
 header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LAB_POLL
   static const uint8_t kGatPublicKey[32];
   cloud_gateway::PollTarget lab_targets_[1] = {{"GAT562-01", kGatPublicKey, 32}};
@@ -44,6 +44,17 @@ source = replace_once(source, '''  memcpy(&tag, data, 4);
                   (unsigned long)tag, (unsigned)(len - 4));
     for (uint8_t i = 4; i < len; ++i) Serial.printf("%02x", data[i]);
     Serial.println();
+    const auto decoded = cloud_gateway::decodeTelemetry(data + 4, len - 4);
+    if (decoded.has_voltage) {
+      Serial.printf("[GATEWAY] GAT562 voltage=%.2f V\\n", decoded.voltage_v);
+    }
+    if (decoded.has_temperature) {
+      Serial.printf("[GATEWAY] GAT562 temperature=%.1f C\\n", decoded.temperature_c);
+    }
+    if (decoded.parsed_bytes != size_t(len - 4)) {
+      Serial.printf("[GATEWAY] GAT562 undecoded_bytes=%u\\n",
+                    (unsigned)(size_t(len - 4) - decoded.parsed_bytes));
+    }
     lab_scheduler_.markReply(millis(), tag);
     return;
   }
