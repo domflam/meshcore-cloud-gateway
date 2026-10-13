@@ -1,128 +1,99 @@
-## About MeshCore
+# MeshCore Cloud Gateway & Solar Weather Station
 
-MeshCore is a lightweight, portable C++ library that enables multi-hop packet routing for embedded projects using LoRa and other packet radios. It is designed for developers who want to create resilient, decentralized communication networks that work without the internet.
+**Experimental MeshCore extension for remote telemetry, solar-powered weather sensing, and cloud visualization.**
 
-## 🔍 What is MeshCore?
+This project explores a lightweight, end-to-end architecture: a remote LoRa/MeshCore node sends sensor observations to a Wi-Fi gateway, which forwards them securely to Google Cloud for storage and visualization. The initial use case is a weather station for an archery club, with particular attention to **wind speed and gusts**, low power consumption, and long-range connectivity.
 
-MeshCore now supports a range of LoRa devices, allowing for easy flashing without the need to compile firmware manually. Users can flash a pre-built binary using tools like Adafruit ESPTool and interact with the network through a serial console.
-MeshCore provides the ability to create wireless mesh networks, similar to Meshtastic and Reticulum but with a focus on lightweight multi-hop packet routing for embedded projects. Unlike Meshtastic, which is tailored for casual LoRa communication, or Reticulum, which offers advanced networking, MeshCore balances simplicity with scalability, making it ideal for custom embedded solutions, where devices (nodes) can communicate over long distances by relaying messages through intermediate nodes. This is especially useful in off-grid, emergency, or tactical situations where traditional communication infrastructure is unavailable.
+> **Project status:** laboratory proof of concept. The GAT562-to-BigQuery telemetry chain has been validated; the RAK4631 weather sensors and dashboard deployment are still under development. This is not an official MeshCore distribution or WeatherXM product.
 
-## ⚡ Key Features
+## Architecture
 
-* Multi-Hop Packet Routing
-  * Devices can forward messages across multiple nodes, extending range beyond a single radio's reach.
-  * Supports up to a configurable number of hops to balance network efficiency and prevent excessive traffic.
-  * Nodes use fixed roles where "Companion" nodes are not repeating messages at all to prevent adverse routing paths from being used.
-* Supports LoRa Radios – Works with Heltec, RAK Wireless, and other LoRa-based hardware.
-* Decentralized & Resilient – No central server or internet required; the network is self-healing.
-* Low Power Consumption – Ideal for battery-powered or solar-powered devices.
-* Simple to Deploy – Pre-built example applications make it easy to get started.
+```text
+CURRENT LAB POC
+GAT562-01 (MeshCore telemetry)
+        │ LoRa / MeshCore
+        ▼
+Heltec WiFi LoRa 32 V3 (gateway)
+        │ HTTPS + Bearer token
+        ▼
+Google Cloud Run (Flask ingestion)
+        │
+        ▼
+BigQuery (meshcore.telemetry)
+        │
+        └── Weather dashboard prototype (not deployed yet)
 
-## 🎯 What Can You Use MeshCore For?
+TARGET WEATHER V1
+BME280 (temperature, humidity, pressure) ─┐
+                                          ├── RAK4631 / RAK19007 solar node
+Passive reed anemometer (wind pulses) ─────┘           │
+                                            MeshCore / LoRa
+                                                      ▼
+                                             Heltec Wi-Fi gateway
+                                                      ▼
+                                         Cloud Run → BigQuery → Web/PWA
+```
 
-* Off-Grid Communication: Stay connected even in remote areas.
-* Emergency Response & Disaster Recovery: Set up instant networks where infrastructure is down.
-* Outdoor Activities: Hiking, camping, and adventure racing communication.
-* Tactical & Security Applications: Military, law enforcement, and private security use cases.
-* IoT & Sensor Networks: Collect data from remote sensors and relay it back to a central location.
+The remote station is intended to operate without Wi-Fi or cellular access. Internet access is required only at the gateway for cloud forwarding.
 
-## 🚀 How to Get Started
+## What has been implemented
 
-- Watch the [MeshCore QuickStart Playlist](https://www.youtube.com/watch?v=iaFltojJrAc&list=PLshzThxhw4O4WU_iZo3NmNZOv6KMrUuF9) by The Comms Channel
-- Watch the [MeshCore Technical Presentation](https://www.youtube.com/watch?v=OwmkVkZQTf4) by Liam Cottle.
-- Read through our [Frequently Asked Questions](./docs/faq.md) and [Documentation](https://docs.meshcore.io).
-- Flash the MeshCore firmware on a supported device.
-- Connect with a supported client.
+- **GAT562 telemetry reception:** gateway decodes remote node battery voltage and temperature.
+- **Heltec V3 Wi-Fi gateway:** configurable Wi-Fi, periodic polling and telemetry uplink.
+- **Cloud ingestion:** authenticated HTTPS POST to a Flask service on Cloud Run, with retries after transient failures.
+- **BigQuery storage:** end-to-end ingestion verified with real laboratory observations.
+- **Dashboard code prototype:** Flask + responsive HTML, JSON endpoint and temperature history chart; **not yet deployed or validated in production**.
 
-For developers:
+These developments live on feature branches / pull requests and are **not necessarily merged into `main`**:
+- [Heltec cloud uplink branch](https://github.com/domflam/meshcore-cloud-gateway/tree/feature/heltec-cloud-uplink-v05)
+- [Weather dashboard prototype (PR #8)](https://github.com/domflam/meshcore-cloud-gateway/pull/8)
 
-- Install [PlatformIO](https://docs.platformio.org) in [Visual Studio Code](https://code.visualstudio.com).
-- Clone and open the MeshCore repository in Visual Studio Code.
-- See the example applications you can modify and run:
-  - [Companion Radio](./examples/companion_radio) - For use with an external chat app, over BLE, USB or Wi-Fi.
-  - [KISS Modem](./examples/kiss_modem) - Serial KISS protocol bridge for host applications. ([protocol docs](./docs/kiss_modem_protocol.md))
-  - [Simple Repeater](./examples/simple_repeater) - Extends network coverage by relaying messages.
-  - [Simple Room Server](./examples/simple_room_server) - A simple BBS server for shared Posts.
-  - [Simple Secure Chat](./examples/simple_secure_chat) - Secure terminal based text communication between devices.
-  - [Simple Sensor](./examples/simple_sensor) - Remote sensor node with telemetry and alerting.
+## Weather station V1 — planned hardware
 
-The Simple Secure Chat example can be interacted with through the Serial Monitor in Visual Studio Code, or with a Serial USB Terminal on Android.
+| Component | Purpose | Status |
+| --- | --- | --- |
+| RAK4631 + RAK19007 | Low-power MeshCore solar station | Integration planned |
+| BME280 | Temperature, humidity, pressure | Sensor integration pending |
+| Lextronic LEXCA003 × 2 | Passive reed anemometers for lab/field tests | Purchase planned; not yet tested |
+| Heltec WiFi LoRa 32 V3 | MeshCore-to-HTTPS gateway | Laboratory uplink validated |
+| Cloud Run + BigQuery | Ingestion and history | Laboratory path validated |
 
-## ⚡️ MeshCore Flasher
+V1 scope: temperature, humidity, pressure, **mean wind speed** and **3-second gust estimate**. Wind direction and rainfall are deferred to a later version. Wind sensor calibration, RJ11 pinout, GPIO allocation, debounce and low-speed gust accuracy must be verified on real hardware.
 
-We have prebuilt firmware ready to flash on supported devices.
+## Development priorities
 
-- Launch https://meshcore.io/flasher
-- Select a supported device
-- Flash one of the firmware types:
-  - Companion, Repeater or Room Server
-- Once flashing is complete, you can connect with one of the MeshCore clients below.
+See **[Project backlog](docs/BACKLOG.md)** for delivered capabilities, open work, acceptance criteria and later ideas.
 
-## 📱 MeshCore Clients
+Immediate next steps:
+1. Integrate the BME280 and passive pulse anemometer on RAK4631 without disrupting MeshCore or solar autonomy.
+2. Define and version the weather telemetry payload; test gateway decoding and BigQuery schema evolution.
+3. Deploy and validate the read-only weather dashboard on a separate Cloud Run service.
+4. Test outdoors, calibrate wind readings and document power consumption.
 
-**Companion Firmware**
+## Repository layout
 
-The companion firmware can be connected to via BLE, USB or Wi-Fi depending on the firmware type you flashed.
+- `examples/`, `src/`, `docs/` and other existing MeshCore directories: upstream-derived embedded code and documentation.
+- `prototype/weather-dashboard/`: experimental Flask dashboard (**feature branch**).
+- `docs/BACKLOG.md`: our project-specific roadmap.
+- `docs/upstream-meshcore-readme.md`: preserved upstream README as it appeared before this project-specific rewrite.
 
-- Web: https://app.meshcore.nz
-- Android: https://play.google.com/store/apps/details?id=com.liamcottle.meshcore.android
-- iOS: https://apps.apple.com/us/app/meshcore/id6742354151?platform=iphone
-- NodeJS: https://github.com/liamcottle/meshcore.js
-- Python: https://github.com/fdlamotte/meshcore-cli
+## Origin, fork and license
 
-**Repeater and Room Server Firmware**
+This repository is **derived from [MeshCore by ripplebiz](https://github.com/ripplebiz/MeshCore)**, a lightweight LoRa multi-hop networking project. It retains upstream MeshCore code while adding experiments around sensor telemetry, Wi-Fi/cloud gateway integration, Google Cloud ingestion, and a solar weather station.
 
-The repeater and room server firmware can be set up via USB in the web config tool.
+**This is an independent experimental extension, not an official MeshCore release.** Our feature branches and files may differ from upstream, and upstream instructions or roadmaps do not necessarily describe this project's current state.
 
-- https://config.meshcore.io
+The original MeshCore README is preserved at [docs/upstream-meshcore-readme.md](docs/upstream-meshcore-readme.md). The upstream MIT license and copyright notice are retained in [license.txt](license.txt); consult individual files for any additional notices. Please respect upstream licenses and attribution when reusing code.
 
-They can also be managed via LoRa in the mobile app by using the Remote Management feature.
+For the original firmware, flashing tools, clients and general MeshCore documentation, visit [MeshCore](https://github.com/ripplebiz/MeshCore) and [docs.meshcore.io](https://docs.meshcore.io).
 
-## 🛠 Hardware Compatibility
+## Security and operational notes
 
-MeshCore is designed for devices listed in the [MeshCore Flasher](https://meshcore.io/flasher)
-
-## 📜 License
-
-MeshCore is open-source software released under the MIT License. You are free to use, modify, and distribute it for personal and commercial projects.
+- Keep Wi-Fi credentials, API tokens and cloud secrets **out of Git**.
+- Prefer a dedicated read-only BigQuery service account for the dashboard.
+- Validate power budget, pin voltage levels and weatherproofing before unattended installation.
+- Mesh radio airtime and telemetry cadence must respect local regulations and network etiquette.
 
 ## Contributing
 
-Please submit PR's using 'dev' as the base branch!
-For minor changes just submit your PR and we'll try to review it, but for anything more 'impactful' please open an Issue first and start a discussion. It is better to sound out what it is you want to achieve first, and try to come to a consensus on what the best approach is, especially when it impacts the structure or architecture of this codebase.
-
-Here are some general principles you should try to adhere to:
-* Keep it simple. Please, don't think like a high-level lang programmer. Think embedded, and keep code concise, without any unnecessary layers.
-* No dynamic memory allocation, except during setup/begin functions.
-* Use the same brace and indenting style that's in the core source modules. (A .clang-format is probably going to be added soon, but please do NOT retroactively re-format existing code. This just creates unnecessary diffs that make finding problems harder)
-
-Help us prioritize! Please react with thumbs-up to issues/PRs you care about most. We look at reaction counts when planning work.
-
-### Running unit tests
-
-To run unit tests, run the following command:
-
-```bash
-pio test --environment native --verbose
-```
-
-## Road-Map / To-Do
-
-There are a number of fairly major features in the pipeline, with no particular time-frames attached yet. In very rough chronological order:
-- [X] Companion radio: UI redesign
-- [X] Repeater + Room Server: add ACL's (like Sensor Node has)
-- [X] Standardise Bridge mode for repeaters
-- [ ] Repeater/Bridge: Standardise the Transport Codes for zoning/filtering
-- [X] Core + Repeater: enhanced zero-hop neighbour discovery
-- [ ] Core: round-trip manual path support
-- [ ] Companion + Apps: support for multiple sub-meshes (and 'off-grid' client repeat mode)
-- [ ] Core + Apps: support for LZW message compression
-- [ ] Core: dynamic CR (Coding Rate) for weak vs strong hops
-- [ ] Core: new framework for hosting multiple virtual nodes on one physical device
-- [ ] V2 protocol spec: discussion and consensus around V2 packet protocol, including path hashes, new encryption specs, etc
-
-## 📞 Get Support
-
-- Report bugs and request features on the [GitHub Issues](https://github.com/ripplebiz/MeshCore/issues) page.
-- Find additional guides and components on [my site](https://buymeacoffee.com/ripplebiz).
-- Join [MeshCore Discord](https://meshcore.gg) to chat with the developers and get help from the community.
+This repository currently serves as a project laboratory. Please open an issue or propose a PR against the relevant project branch before making substantial changes. The upstream MeshCore contribution guidelines apply to contributions **to upstream**, not automatically to this fork.
