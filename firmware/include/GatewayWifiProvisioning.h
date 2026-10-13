@@ -36,9 +36,36 @@ static void startPortal() {
   portal.on("/", HTTP_GET, []() {
     String page = "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head><body><h2>MeshCore Gateway Wi-Fi</h2><form method='POST' action='/save'><label>SSID <input name='ssid' required maxlength='32'></label><br><label>Password <input type='password' name='pwd' maxlength='63'></label><br><button>Save and connect</button></form><p>Current IP: ";
     page += htmlEscape(WiFi.localIP().toString());
-    page += "</p></body></html>";
+    page += "</p><p><a href='/cloud'>Cloud uplink setup</a></p></body></html>";
     portal.send(200, "text/html", page);
   });
+#ifdef CLOUD_GATEWAY_LAB_UPLINK
+  portal.on("/cloud", HTTP_GET, []() {
+    portal.send(200, "text/html", "<form method='POST' action='/cloud/save'>"
+      "HTTPS URL <input name='url'><p>Bearer token <input name='token' type='password'></p>"
+      "<p>CA PEM <textarea name='ca' rows='12' cols='60'></textarea></p>"
+      "<p><label><input name='enabled' type='checkbox' value='1'>Enable</label></p>"
+      "<button>Save</button></form>");
+  });
+  portal.on("/cloud/save", HTTP_POST, []() {
+    String url = portal.arg("url"), secret = portal.arg("token"), ca = portal.arg("ca");
+    if (!url.startsWith("https://") || !url.endsWith("/v1/telemetry") ||
+        url.length() > 220 || secret.length() < 24 || secret.length() > 256 ||
+        ca.length() < 500 || ca.length() > 3500 ||
+        ca.indexOf("-----BEGIN CERTIFICATE-----") < 0) {
+      portal.send(400, "text/plain", "Invalid cloud configuration");
+      return;
+    }
+    Preferences cp;
+    cp.begin("gateway-cloud", false);
+    cp.putString("url", url);
+    cp.putString("token", secret);
+    cp.putString("ca", ca);
+    cp.putBool("enabled", portal.arg("enabled") == "1");
+    cp.end();
+    portal.send(200, "text/plain", "Saved; reboot gateway to apply.");
+  });
+#endif
   portal.on("/save", HTTP_POST, []() {
     const String ssid = portal.arg("ssid");
     const String pwd = portal.arg("pwd");
