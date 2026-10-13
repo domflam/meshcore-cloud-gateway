@@ -28,7 +28,7 @@ jobs:
         run: |
           cp gateway/firmware/include/TelemetryScheduler.h upstream/examples/companion_radio/TelemetryScheduler.h
           cp gateway/firmware/include/TelemetryDecoder.h upstream/examples/companion_radio/TelemetryDecoder.h
-          cp gateway/firmware/include/GatewayWifiProvisioning.h upstream/examples/companion_radio/GatewayWifiProvisioning.h
+          cp gateway/firmware/include/GatewayCloudUplink.h upstream/examples/companion_radio/GatewayCloudUplink.h\n          cp gateway/firmware/include/GatewayWifiProvisioning.h upstream/examples/companion_radio/GatewayWifiProvisioning.h
           python gateway/firmware/scripts/apply_lab_patch.py upstream
           python gateway/firmware/scripts/enable_wifi_provisioning.py upstream
           python - <<'PY'
