@@ -1,0 +1,10 @@
+{
+  "poll_interval_seconds": 900,
+  "nodes": [
+    {
+      "id": "GAT562-01",
+      "meshcore_public_key": "26b5986ec521b62b9811688513f9a720b5245cd9448f90d4cbe3e0ca23c817ca",
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+name: LAB Heltec V3 BLE telemetry
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/heltec-lab-ble.yml'
+
+jobs:
+  build-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: gateway
+      - uses: actions/checkout@v4
+        with:
+          repository: meshcore-dev/MeshCore
+          ref: main # LAB only; pin exact SHA after first successful build
+          submodules: recursive
+          path: upstream
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade platformio
+      - name: Inject gateway scheduler into upstream
+        shell: bash
+        run: |
+          cp gateway/firmware/include/TelemetryScheduler.h upstream/examples/companion_radio/TelemetryScheduler.h
+          cp gateway/firmware/include/TelemetryDecoder.h upstream/examples/companion_radio/TelemetryDecoder.h
+          python gateway/firmware/scripts/apply_lab_patch.py upstream
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('upstream/variants/heltec_v3/platformio.ini')
+          data = p.read_text()
+          header = '[env:Heltec_v3_companion_radio_ble]'
+          before, after = data.split(header, 1)
+          section, rest = after.split('[env:', 1)
+          old = '  ${Heltec_lora32_v3.build_flags}'
+          assert section.count(old) == 1
+          section = section.replace(old, old + '\n  -D CLOUD_GATEWAY_LAB_POLL=1\n  -D CLOUD_GATEWAY_POLL_INTERVAL_MS=60000', 1)
+          p.write_text(before + header + section + '[env:' + rest)
+          PY
+      - name: Compile BLE gateway
+        run: pio run -d upstream -e Heltec_v3_companion_radio_ble
+      - name: Upload test firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: heltec-v3-ble-gat562-lab
+          path: upstream/.pio/build/Heltec_v3_companion_radio_ble/*.bin
+          if-no-files-found: error
