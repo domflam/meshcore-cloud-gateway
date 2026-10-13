@@ -16,6 +16,7 @@ git clone https://github.com/domflam/meshcore-cloud-gateway.git
 cd meshcore-cloud-gateway
 git checkout feature/cloud-ingestion-v04
 bash infra/scripts/bootstrap.sh
+bash infra/scripts/setup-state.sh
 bash infra/scripts/plan.sh
 ```
 
@@ -40,8 +41,9 @@ opt-in (`allow_public_ingress=true`) and security review of token handling,
 rotation, replay protection, quotas and abuse prevention.
 
 **Do not commit Terraform state**: it may contain sensitive metadata.
-This prototype uses local state; configure a versioned, access-controlled GCS
-backend before team or production use. Do not use Terraform destroy on the
+The setup-state.sh script creates a versioned GCS bucket and initializes the
+remote backend. Run it **before** the first Terraform apply. Confirm bucket
+ownership and access if the bucket already exists. Do not use Terraform destroy on the
 telemetry dataset; the table is protected.
 
 Cost: billing and usage are not capped by Terraform. Configure a billing budget
