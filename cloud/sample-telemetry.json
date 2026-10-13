@@ -1,0 +1,8 @@
+{
+  "event_id": "gat562-20261013-001",
+  "node_id": "GAT562-01",
+  "observed_at": "2026-10-13T12:00:00Z",
+  "voltage_v": 4.10,
+  "temperature_c": 21.5,
+  "source": "meshcore"
+}
