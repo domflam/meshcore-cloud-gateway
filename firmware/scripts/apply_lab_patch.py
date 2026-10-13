@@ -26,7 +26,17 @@ header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LA
       lab_targets_, 1, CLOUD_GATEWAY_POLL_INTERVAL_MS, 30000UL};
 #endif
   DataStore* _store;''', 'scheduler members')
+source = replace_once(source, '    } else if (strcmp(cli_command, "rebuild") == 0) {', '''    } else if (strcmp(cli_command, "cloud setup") == 0) {
+#ifdef CLOUD_GATEWAY_LAB_UPLINK
+      gateway_wifi::openSetupPortal();
+#else
+      Serial.println("  Cloud setup not available in this build");
+#endif
+    } else if (strcmp(cli_command, "rebuild") == 0) {''', 'cloud setup rescue CLI')
 source = replace_once(source, '#include "MyMesh.h"', '''#include "MyMesh.h"
+#ifdef CLOUD_GATEWAY_LAB_UPLINK
+#include "GatewayWifiProvisioning.h"
+#endif
 #ifdef CLOUD_GATEWAY_LAB_POLL
 const uint8_t MyMesh::kGatPublicKey[32] = {\n  0x26,0xb5,0x98,0x6e,0xc5,0x21,0xb6,0x2b,\n  0x98,0x11,0x68,0x85,0x13,0xf9,0xa7,0x20,\n  0xb5,0x24,0x5c,0xd9,0x44,0x8f,0x90,0xd4,\n  0xcb,0xe3,0xe0,0xca,0x23,0xc8,0x17,0xca\n};
 #endif''', 'static key definition')
