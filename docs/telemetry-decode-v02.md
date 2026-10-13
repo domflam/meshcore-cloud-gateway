@@ -1,39 +1,42 @@
-# Telemetry decode V0.2 — capture and verification
+# Telemetry decode V0.2 — verified CayenneLPP fields
 
-## Confirmed hardware POC
-Heltec V3 Companion BLE + autonomous GAT562 poller returned:
+The working V0.1 firmware remains unchanged. This branch adds an offline
+CayenneLPP inspector and regression tests.
+
+## Observed GAT562 capture
 
 ```text
 [GATEWAY] TX GAT562 tag=6acdf14d timeout_est=2694 ms
 [GATEWAY] RX GAT562 telemetry tag=6acdf14d bytes=12 payload=0174019b016700d400000000
 ```
 
-The matching tags confirm response correlation. The payload is **12 bytes**, not yet
-a verified list of sensor readings. Do not label any offsets as temperature,
-humidity, battery, pressure, etc. without checking the upstream MeshCore
-telemetry serialization and the GAT562 device's advertised sensor types.
+Known CayenneLPP records (channel, sensor type, big-endian value):
+- `01 74 01 9b`: channel 1, voltage 0x019b * 0.01 = **4.11 V**.
+- `01 67 00 d4`: channel 1, temperature 0x00d4 * 0.1 = **21.2 °C**.
+- `00 00 00 00`: unknown/unparsed suffix; do not assign a meaning yet.
 
-## Non-invasive inspection
+Companion screenshot: **4.11 V, 22.5 °C, 92%**. Voltage matches;
+temperature likely changed between captures, but simultaneous verification
+is needed. The battery percentage is derived by the app from voltage; the
+capture does not contain a validated explicit state-of-charge field.
+
+Reference: MeshCore CayenneLPP telemetry and LPP sensor type codes.
+- https://github.com/cbattlegear/MeshCoreOne-Android/blob/main/MeshCore/Sources/MeshCore/MeshCore.docc/Articles/Telemetry.md
+- https://meshcore-dev.github.io/meshcore-ha/docs/ha/sensors/
+
+## Run tests and inspect
+
 ```sh
 python3 tools/inspect_telemetry.py 0174019b016700d400000000
 python3 -m unittest discover -s tests -p 'test_telemetry_inspect.py'
 ```
 
-The tool prints octets and candidate 16-bit integer interpretations for
-diagnostics. These are **not decoded MeshCore fields**. It does not change
-firmware, BLE behavior, or radio scheduling.
+The tool does not touch radio/BLE firmware. Unknown and truncated records
+are left as raw hex, never fabricated.
 
-## Next implementation gate
-1. Identify upstream MeshCore telemetry wire schema, version, type identifiers
-   and byte order in the precise upstream revision used by the LAB build.
-2. Capture a second GAT562 payload alongside the values displayed in MeshCore
-   Companion and compare; do not infer fields from a single sample.
-3. Implement schema-aware C++ decoder with bounds checks and golden tests.
-4. Compile the LAB firmware and validate decoded values against the app.
-5. Only then add Wi-Fi HTTPS ingestion into Cloud Run / BigQuery.
-
-## Regression requirements
-- Existing BLE Companion functionality remains available.
-- Autonomous requests must yield to Companion traffic.
-- Unknown or malformed telemetry must be logged as raw hex, never fabricated.
-- Preserve the successful V0.1 firmware / PR #3.
+## Next steps
+1. Collect a simultaneous Companion screenshot and serial payload.
+2. Inspect the four trailing zero bytes in the precise firmware schema.
+3. Port this bounded decoder to the LAB firmware and run the BLE build.
+4. Flash only after the build is green and then verify readings on hardware.
+5. Add HTTPS upload to Cloud Run and BigQuery after device-side verification.
