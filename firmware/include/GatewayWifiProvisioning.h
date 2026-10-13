@@ -11,6 +11,8 @@ static DNSServer dns;
 static Preferences prefs;
 static bool ap_active = false;
 static bool manual_setup = false;
+static unsigned long manual_setup_started = 0;
+static constexpr unsigned long kSetupWindowMs = 600000UL;
 static bool time_sync_started = false;
 static bool has_credentials = false;
 static unsigned long disconnected_since = 0;
@@ -94,6 +96,7 @@ static void startPortal() {
 
 static void openSetupPortal() {
   manual_setup = true;
+  manual_setup_started = millis();
   startPortal();
   Serial.println("[WIFI] Manual setup active; reboot to close");
 }
@@ -109,6 +112,20 @@ static void begin() {
   if (has_credentials) {
     WiFi.begin(ssid.c_str(), pwd.c_str());
     Serial.println("[WIFI] Connecting with saved SSID");
+#ifdef CLOUD_GATEWAY_LAB_UPLINK
+    Preferences cloud_prefs;
+    if (cloud_prefs.begin("gateway-cloud", true)) {
+      const bool needs_setup = cloud_prefs.getString("url", "").isEmpty();
+      cloud_prefs.end();
+      if (needs_setup) {
+        Serial.println("[CLOUD] Not configured; opening setup portal for 10 minutes");
+        openSetupPortal();
+      }
+    } else {
+      Serial.println("[CLOUD] No cloud settings; opening setup portal for 10 minutes");
+      openSetupPortal();
+    }
+#endif
   } else {
     Serial.println("[WIFI] No saved SSID; starting configuration portal");
     startPortal();
@@ -116,6 +133,17 @@ static void begin() {
 }
 
 static void loop() {
+  if (manual_setup && millis() - manual_setup_started >= kSetupWindowMs) {
+    manual_setup = false;
+    if (ap_active) {
+      portal.stop();
+      dns.stop();
+      WiFi.softAPdisconnect(true);
+      WiFi.mode(WIFI_STA);
+      ap_active = false;
+      Serial.println("[WIFI] Cloud setup window expired; AP closed");
+    }
+  }
   if (WiFi.status() == WL_CONNECTED) {
     disconnected_since = 0;
 #ifdef CLOUD_GATEWAY_LAB_UPLINK
