@@ -28,7 +28,7 @@ header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LA
   DataStore* _store;''', 'scheduler members')
 source = replace_once(source, '    } else if (strcmp(cli_command, "rebuild") == 0) {', '''    } else if (strcmp(cli_command, "cloud setup") == 0) {
 #ifdef CLOUD_GATEWAY_LAB_UPLINK
-      gateway_wifi::openSetupPortal();
+      openGatewayCloudSetup();
 #else
       Serial.println("  Cloud setup not available in this build");
 #endif
