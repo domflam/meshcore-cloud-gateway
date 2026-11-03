@@ -33,7 +33,8 @@ per-profile allowance. Other unknown suffixes are rejected.
 
 ## Select the actual polling target
 
-The existing CI workflow retains the historical GAT562 target by default.
+The Wi-Fi LAB CI workflow builds separate GAT562 and RAK4631 artifacts.
+Each artifact polls only its configured target.
 `firmware/config/nodes.example.json` is descriptive; it is not loaded at runtime.
 To prepare a RAK LAB build, invoke the patch against a clean upstream checkout,
 using its **actual** contact public key (64 hexadecimal characters):
@@ -48,7 +49,10 @@ Use `--temperature-channel`, `--humidity-channel`, `--pressure-channel`,
 (-1 disables a measurement). The patch binds that profile to the verified
 public key and response tag. It still polls one target, like the existing LAB
 implementation. Copy the headers and build with the existing Wi-Fi workflow's
-flags. The RAK public key has not been supplied, so no identity is guessed.
+flags. The RAK4631-LAB public key supplied by the operator is:
+`9222cc51c4ad973798dab0e1e5d49630948a6e1f0b3576a059774e1d0d53ebb7`.
+It is recorded in the LAB build matrix and example node configuration; this is
+public identity data, not a credential.
 
 ## API and BigQuery
 
@@ -122,3 +126,28 @@ exits nonzero: run under a supervisor for redelivery. Invalid messages require
 operator quarantine before restart. This is a LAB adapter, without a dead-letter
 queue or IAM identity-token flow. Validate broker redelivery and duplicates in
 LAB before relying on it. Direct HTTPS needs none of this MQTT setup.
+
+## Existing GCP test environment
+
+Repository deployment notes identify project `meshcore-cloud-gateway`, region
+`europe-west1`, Cloud Run service `meshcore-ingestion` and BigQuery table
+`meshcore-cloud-gateway.meshcore.telemetry`. These references are historical;
+verify the current service configuration before changing anything. The Terraform
+table schema now includes the environmental fields as well as the SQL migration.
+Review a Terraform plan before applying; do not apply infrastructure changes
+as part of a read-only check.
+
+First, in an authenticated Cloud Shell, inspect the current service without
+printing its environment variables or secrets:
+
+```sh
+gcloud run services describe meshcore-ingestion \
+  --project=meshcore-cloud-gateway --region=europe-west1 \
+  --format='yaml(status.url,status.latestReadyRevisionName)'
+bq show --schema --format=prettyjson meshcore-cloud-gateway:meshcore.telemetry
+```
+
+The new firmware requires the new API and schema to be validated on a LAB
+endpoint before upload is enabled. Reuse the existing IAM-authenticated proxy
+procedure in `infra/DEPLOY.md` for API tests. Never paste the ingestion token
+into chat. No changes to the existing GCP project were made here.

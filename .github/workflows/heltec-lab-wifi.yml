@@ -8,6 +8,18 @@ on:
 
 jobs:
   build-lab-wifi:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: gat562
+            node_id: GAT562-01
+            public_key: 26b5986ec521b62b9811688513f9a720b5245cd9448f90d4cbe3e0ca23c817ca
+            profile: legacy
+          - target: rak4631
+            node_id: RAK4631-LAB
+            public_key: 9222cc51c4ad973798dab0e1e5d49630948a6e1f0b3576a059774e1d0d53ebb7
+            profile: rak-simulated
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +42,10 @@ jobs:
           cp gateway/firmware/include/TelemetryDecoder.h upstream/examples/companion_radio/TelemetryDecoder.h
           cp gateway/firmware/include/GatewayCloudUplink.h upstream/examples/companion_radio/GatewayCloudUplink.h
           cp gateway/firmware/include/GatewayWifiProvisioning.h upstream/examples/companion_radio/GatewayWifiProvisioning.h
-          python gateway/firmware/scripts/apply_lab_patch.py upstream
+          python gateway/firmware/scripts/apply_lab_patch.py upstream \
+            --node-id '${{ matrix.node_id }}' \
+            --public-key '${{ matrix.public_key }}' \
+            --profile '${{ matrix.profile }}'
           python gateway/firmware/scripts/enable_wifi_provisioning.py upstream
           python - <<'PY'
           from pathlib import Path
@@ -50,6 +65,6 @@ jobs:
       - name: Upload test firmware
         uses: actions/upload-artifact@v4
         with:
-          name: heltec-v3-wifi-gat562-lab
+          name: heltec-v3-wifi-${{ matrix.target }}-lab
           path: upstream/.pio/build/Heltec_v3_companion_radio_wifi/*.bin
           if-no-files-found: error

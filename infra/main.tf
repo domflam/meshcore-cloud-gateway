@@ -54,7 +54,11 @@ resource "google_bigquery_table" "telemetry" {
     { name = "received_at", type = "TIMESTAMP", mode = "REQUIRED" },
     { name = "voltage_v", type = "FLOAT", mode = "NULLABLE" },
     { name = "temperature_c", type = "FLOAT", mode = "NULLABLE" },
-    { name = "source", type = "STRING", mode = "NULLABLE" }
+    { name = "source", type = "STRING", mode = "NULLABLE" },
+    { name = "humidity_pct", type = "FLOAT", mode = "NULLABLE" },
+    { name = "pressure_hpa", type = "FLOAT", mode = "NULLABLE" },
+    { name = "wind_speed_mps", type = "FLOAT", mode = "NULLABLE" },
+    { name = "wind_simulated", type = "BOOLEAN", mode = "NULLABLE" }
   ])
 }
 
