@@ -35,7 +35,7 @@ def replace_once(text, old, new, label):
         raise SystemExit(f"{label}: expected one anchor, found {count}")
     return text.replace(old, new, 1)
 
-header = replace_once(header, '#include "AbstractUITask.h"', '#include "AbstractUITask.h"\n#ifdef CLOUD_GATEWAY_LAB_POLL\n#include "TelemetryScheduler.h"\n#include "TelemetryDecoder.h"\n#endif', 'header include')
+header = replace_once(header, '#include "DataStore.h"', '#include "DataStore.h"\n#ifdef CLOUD_GATEWAY_LAB_POLL\n#include "TelemetryScheduler.h"\n#include "TelemetryDecoder.h"\n#endif', 'header include')
 header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LAB_POLL
   static const uint8_t kGatPublicKey[32];
   cloud_gateway::PollTarget lab_targets_[1] = {{"GAT562-01", kGatPublicKey, 32}};

@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: meshcore-dev/MeshCore
-          ref: main # LAB only; pin exact SHA after first successful build
+          ref: 81dbae592ffad40b4212bc0b37e82b38da08f4bc # pinned MeshCore baseline
           submodules: recursive
           path: upstream
       - uses: actions/setup-python@v5

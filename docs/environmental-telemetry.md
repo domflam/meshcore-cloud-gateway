@@ -84,8 +84,8 @@ No real broker, radio, HTTPS endpoint or BigQuery service is contacted.
 ## End-to-end LAB acceptance (manual)
 
 1. Review the patch and build the Wi-Fi LAB firmware against a pinned upstream
-   MeshCore revision. The existing workflow tracks upstream main; record its
-   exact SHA. Confirm the RAK identity and profile before flashing.
+   MeshCore revision. The LAB workflows pin MeshCore to
+   `81dbae592ffad40b4212bc0b37e82b38da08f4bc`. Confirm the RAK identity and profile before flashing.
 2. On a test dataset, review/apply the additive schema migration; run the API
    with test-only credentials. Resolve Cloud Run IAM invocation separately from
    the application's bearer token. Do not loosen production IAM to test this.
@@ -151,3 +151,9 @@ The new firmware requires the new API and schema to be validated on a LAB
 endpoint before upload is enabled. Reuse the existing IAM-authenticated proxy
 procedure in `infra/DEPLOY.md` for API tests. Never paste the ingestion token
 into chat. No changes to the existing GCP project were made here.
+
+LAB build integration: the patch uses the common DataStore header anchor for
+this upstream revision. The Wi-Fi setup patch replaces upstream credential
+initialization with the gateway NVS portal and disables the competing upstream
+reconnect loop; the Companion TCP interface remains available. Radio reception,
+TCP connectivity and Wi-Fi reconnection still require physical LAB validation.
