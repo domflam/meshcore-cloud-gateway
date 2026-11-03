@@ -1,7 +1,9 @@
 # V0.4 — Cloud ingestion prototype
 
-This is an independent prototype. It is **not deployed** and the Heltec firmware
-does **not** send HTTP requests yet.
+The repository includes a LAB Heltec HTTPS uplink. Deployment state cannot be
+inferred from this checkout. See [environmental telemetry](../docs/environmental-telemetry.md)
+for the current contract, device profiles, additive schema migration and LAB tests.
+MQTT is optional and is not part of the direct HTTPS path.
 
 ## Contract
 
@@ -13,7 +15,8 @@ GET /health returns 200 without authentication (liveness only).
 
 Fields: event_id (stable per measurement, required), node_id (required),
 observed_at (ISO-8601 UTC/offset, required), voltage_v (optional),
-temperature_c (optional), source (must be meshcore). At least one measurement
+temperature_c, humidity_pct, pressure_hpa, wind_speed_mps (optional),
+wind_simulated (optional boolean; requires wind_speed_mps), source (must be meshcore). At least one measurement
 must be present. Keep event_id stable across retries.
 
 ## Local test

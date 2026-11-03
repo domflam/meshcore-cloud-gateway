@@ -6,6 +6,7 @@ import re
 
 # MeshCore LPP sensor type codes. Multibyte LPP values are big-endian.
 TYPES = {
+    0x02: ("analog_input", 2, 0.01, True),
     0x67: ("temperature_c", 2, 0.1, True),
     0x68: ("humidity_pct", 1, 0.5, False),
     0x73: ("barometer_hpa", 2, 0.1, False),
