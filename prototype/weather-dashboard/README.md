@@ -1,4 +1,4 @@
-# Météo du Club — PWA Android
+# Météo CASLF — PWA Android
 
 Application web responsive installable depuis une icône, issue du prototype
 `feature/weather-dashboard-prototype`. Service autonome de lecture seule :
@@ -9,7 +9,9 @@ aucune modification du firmware ni de l’API d’ingestion en fonctionnement.
 - BME280 : température, humidité et pression ; batterie en volts, sans pourcentage inventé.
 - Vent : zéro conservé, badge « SIMULÉ » uniquement si le booléen est vrai.
 - Date du relevé en heure locale ; avertissement au-delà de cinq minutes.
-- Historique de température disponible sur les dernières 24 h, jusqu’à 300 points.
+- Quatre courbes sur les dernières 24 h : température, humidité, pression et vent, jusqu’à 300 points.
+- Identité CASLF : logo fourni, nom et icônes Android.
+- Vent simulé en pointillés ; les données manquantes coupent la courbe.
 - Actualisation toutes les 90 s quand l’application est visible ; bouton manuel.
 - Valeurs manquantes affichées « — » ; elles ne deviennent jamais zéro.
 - Erreur de lecture explicitée ; les valeurs encore affichées gardent leur date.
@@ -31,6 +33,7 @@ DASHBOARD_DEMO sur le service qui doit présenter les vraies mesures.
 
 ```sh
 python -m unittest discover -s tests -v
+node tests/chart-model.test.cjs
 ```
 
 Les tests couvrent accès fermé par défaut, origine du login, cookies HTTPS,

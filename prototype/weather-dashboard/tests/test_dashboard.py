@@ -108,6 +108,19 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertNotIn('private error detail', response.get_data(as_text=True))
 
+    def test_caslf_branding_and_four_histories(self):
+        response = self.client.get('/')
+        html = response.get_data(as_text=True)
+        for text in ('Météo CASLF', 'Station météo du terrain de la Chataigneraie',
+                     'Météo en direct', 'Mesures effectuées sur le terrain'):
+            self.assertIn(text, html)
+        for field in ('temperature_c', 'humidity_pct', 'pressure_hpa', 'wind_speed_mps'):
+            self.assertIn('id="chart-' + field + '"', html)
+        with self.client.get('/static/logo-caslf.png') as logo:
+            self.assertEqual(logo.status_code, 200)
+        with self.client.get('/static/sw.js') as worker:
+            self.assertIn(b'/static/chart-model.js', worker.data)
+
     def test_installable_assets_and_security_headers(self):
         manifest = self.client.get('/manifest.webmanifest')
         data = json.loads(manifest.data)

@@ -4,19 +4,20 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#142f2b"><meta name="description" content="Les mesures de votre station MeshCore, à portée de main.">
 <link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/png" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/app.css"><title>Météo du Club</title>
+<link rel="stylesheet" href="/static/app.css"><title>Météo CASLF</title>
+<script src="/static/chart-model.js" defer></script>
 <script src="/static/app.js" defer></script>
 </head>
 <body>
 <div class="app">
-<header><a class="brand" href="/" aria-label="Météo du Club, accueil"><img src="/static/icon.svg" alt="" width="42" height="42"><span>Météo<span class="brand-sub">DU CLUB</span></span></a><button id="install" class="button small" hidden>Installer l’appli <span aria-hidden="true">↗</span></button></header>
+<header><a class="brand" href="/" aria-label="Météo CASLF, accueil"><img src="/static/logo-caslf.png" alt="Logo de la Compagnie d’Arc Saint-Leu-la-Forêt" width="60" height="64"><span>Météo<span class="brand-sub">CASLF</span></span></a><button id="install" class="button small" hidden>Installer l’appli <span aria-hidden="true">↗</span></button></header>
 <main>
 <section id="login" class="login panel" hidden>
 <p class="eyebrow">VOTRE STATION, PARTOUT</p><h1>Un œil sur la météo.</h1><p>Connecte-toi pour retrouver les dernières mesures du club.</p>
 <form id="login-form"><label for="password">Mot de passe du tableau de bord</label><input id="password" type="password" autocomplete="current-password" required minlength="16"><button class="button primary" type="submit">Ouvrir le tableau de bord <span aria-hidden="true">↗</span></button></form><p id="login-error" role="alert"></p>
 </section>
 <div id="dashboard">
-<div class="intro"><div><p class="eyebrow">LA STATION MÉTÉO DU CLUB</p><h1>Dehors, en ce moment.</h1><p class="lead">Les mesures du terrain, simplement.</p></div><span id="status" class="status" role="status">Chargement…</span></div>
+<div class="intro"><div><p class="eyebrow">Station météo du terrain de la Chataigneraie</p><h1>Météo en direct</h1><p class="lead">Mesures effectuées sur le terrain</p></div><span id="status" class="status" role="status">Chargement…</span></div>
 <div id="demo" class="notice" hidden><span aria-hidden="true">◉</span><div><strong>Aperçu · relevés du 3 novembre 2026</strong><span>Deux mesures de validation. Cette version de démonstration n’est pas reliée au direct.</span></div></div>
 <div id="error" class="notice error" role="alert" hidden></div>
 <section class="weather-grid" aria-label="Dernières mesures">
@@ -25,11 +26,16 @@
 <article class="metric panel"><div class="metric-title"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 24a13 13 0 1 1 22 0M16 4v4M5 10l3 3M27 10l-3 3M16 21l7-9"/><circle cx="16" cy="21" r="2"/></svg><h2>Pression</h2></div><p class="metric-value"><span id="pressure">—</span><span class="unit">hPa</span></p><p class="caption">Pression mesurée à la station</p></article>
 <article class="wind panel"><div class="metric-title"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 11h18a4 4 0 1 0-4-4M3 17h23a4 4 0 1 1-4 4M3 23h9a3 3 0 1 1-3 3"/></svg><h2>Vent</h2><span id="simulated" class="tag" hidden>SIMULÉ</span></div><p class="metric-value"><span id="wind">—</span><span class="unit">m/s</span></p><p id="wind-note" class="caption">En attente de données</p></article>
 </section>
-<section class="history panel" aria-labelledby="history-title"><div class="section-top"><div><p class="eyebrow">AU FIL DES HEURES</p><h2 id="history-title">La température en détail</h2></div><span class="period">24 dernières heures</span></div><div id="chart" class="chart" role="img" aria-label="Historique de température en attente"></div><div class="chart-bottom"><span id="point-count">Aucune mesure</span><span>Heure locale du téléphone</span></div></section>
+<div class="histories">
+<section class="history panel" aria-labelledby="history-title-temperature_c"><div class="section-top"><div><p class="eyebrow">AU FIL DES HEURES</p><h2 id="history-title-temperature_c">La température en détail</h2></div><span class="period">24 dernières heures</span></div><div id="chart-temperature_c" class="chart" role="img" aria-label="Historique de température en attente"></div><div class="chart-bottom"><span id="point-count-temperature_c">Aucune mesure</span><span>Heure locale du téléphone</span></div><p id="history-note-temperature_c" class="history-note" hidden></p></section>
+<section class="history panel" aria-labelledby="history-title-humidity_pct"><div class="section-top"><div><p class="eyebrow">AU FIL DES HEURES</p><h2 id="history-title-humidity_pct">L’humidité en détail</h2></div><span class="period">24 dernières heures</span></div><div id="chart-humidity_pct" class="chart" role="img" aria-label="Historique de humidité en attente"></div><div class="chart-bottom"><span id="point-count-humidity_pct">Aucune mesure</span><span>Heure locale du téléphone</span></div><p id="history-note-humidity_pct" class="history-note" hidden></p></section>
+<section class="history panel" aria-labelledby="history-title-pressure_hpa"><div class="section-top"><div><p class="eyebrow">AU FIL DES HEURES</p><h2 id="history-title-pressure_hpa">La pression en détail</h2></div><span class="period">24 dernières heures</span></div><div id="chart-pressure_hpa" class="chart" role="img" aria-label="Historique de pression en attente"></div><div class="chart-bottom"><span id="point-count-pressure_hpa">Aucune mesure</span><span>Heure locale du téléphone</span></div><p id="history-note-pressure_hpa" class="history-note" hidden></p></section>
+<section class="history panel" aria-labelledby="history-title-wind_speed_mps"><div class="section-top"><div><p class="eyebrow">AU FIL DES HEURES</p><h2 id="history-title-wind_speed_mps">Le vent en détail</h2></div><span class="period">24 dernières heures</span></div><div id="chart-wind_speed_mps" class="chart" role="img" aria-label="Historique de vent en attente"></div><div class="chart-bottom"><span id="point-count-wind_speed_mps">Aucune mesure</span><span>Heure locale du téléphone</span></div><p id="history-note-wind_speed_mps" class="history-note" hidden></p></section>
+</div>
 <section class="station panel"><div class="station-symbol" aria-hidden="true">⌁</div><div class="station-title"><h2>Station <span id="node">RAK4631-LAB</span></h2><p id="last-seen">Dernier relevé : en attente</p></div><div class="battery"><span class="battery-icon" aria-hidden="true"></span><strong id="voltage">— V</strong><span class="quiet">Batterie</span></div><button id="refresh" class="refresh" aria-label="Actualiser les mesures" title="Actualiser">↻</button></section>
-<section class="install-help"><div><strong>Votre météo, à portée de main.</strong><p>Dans Chrome sur Android : menu ⋮ puis « Ajouter à l’écran d’accueil » ou « Installer l’application ».</p></div><img src="/static/icon-192.png" width="52" height="52" alt="Icône Météo du Club"></section>
+<section class="install-help"><div><strong>Votre météo, à portée de main.</strong><p>Dans Chrome sur Android : menu ⋮ puis « Ajouter à l’écran d’accueil » ou « Installer l’application ».</p></div><img src="/static/icon-192.png" width="52" height="52" alt="Icône Météo CASLF"></section>
 </div>
 </main>
-<footer><span>MÉTÉO DU CLUB <span class="footer-dot">/</span> STATION MESHCORE</span><button id="logout" hidden>Se déconnecter</button><span>Actualisation toutes les 90 s</span></footer>
+<footer><span>MÉTÉO CASLF <span class="footer-dot">/</span> STATION MESHCORE</span><button id="logout" hidden>Se déconnecter</button><span>Actualisation toutes les 90 s</span></footer>
 </div>
 </body></html>
