@@ -96,3 +96,35 @@ réponses API ou les mesures privées. Sans réseau, l’interface peut s’ouvr
 ne prétend pas disposer de nouveaux relevés ; un rechargement complet hors ligne
 ne dispose pas des anciennes valeurs. L’installation réelle sur Android et
 la connexion GCP ne sont pas validées par le seul aperçu local.
+
+## Scripts Cloud Shell (exécuter dans cet ordre)
+
+Après validation de la mise en ligne :
+
+```sh
+bash prototype/weather-dashboard/scripts/prepare-gcp.sh
+bash prototype/weather-dashboard/scripts/build-image.sh
+bash prototype/weather-dashboard/scripts/deploy.sh
+```
+
+Le premier script ajoute les droits au compte dédié et génère les nouveaux secrets
+sans les afficher. Les secrets déjà présents ne sont pas écrasés. Il ne modifie
+pas le service d’ingestion. Le deuxième construit une image distincte. Le dernier
+crée le service HTTPS avec login applicatif ; il rend la page d’accueil accessible
+sur Internet mais pas les relevés sans session. Aucun mode démonstration n’est activé.
+Ne lancer le dernier script qu’après succès de la préparation et de la compilation.
+
+Récupérer le mot de passe pour son usage personnel, dans Cloud Shell uniquement :
+
+```sh
+gcloud secrets versions access latest --secret=weather-dashboard-password --project=meshcore-cloud-gateway
+```
+
+Ne jamais envoyer le résultat dans une discussion ou un ticket. Le secret de
+session n’a pas besoin d’être consulté. Les scripts sont vérifiés syntaxiquement ;
+ils doivent encore être exécutés et validés sur le projet.
+
+Références GCP :
+- https://docs.cloud.google.com/bigquery/docs/control-access-to-resources-iam
+- https://docs.cloud.google.com/run/docs/configuring/services/secrets
+- https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy
