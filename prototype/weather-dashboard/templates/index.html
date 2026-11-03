@@ -1,34 +1,35 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Météo du Club — prototype</title>
-<style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#e9f1f4;background:#0c1822}body{max-width:880px;margin:0 auto;padding:28px 18px}h1{font-size:1.6rem}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.card{background:#192b38;border:1px solid #324956;border-radius:16px;padding:20px}.label{color:#a6beca;font-size:.85rem}.value{font-size:2.4rem;font-weight:700;margin-top:8px}svg{width:100%;height:230px;overflow:visible}.chart{margin-top:18px}.muted{color:#9eb6c2}#status{margin-bottom:18px}
-</style></head><body>
-<h1>🌤️ Météo du Club <small class="muted">· prototype</small></h1>
-<p id="status" class="muted">Chargement des mesures…</p>
-<main><section class="card"><div class="label">Température</div><div id="temp" class="value">—</div></section>
-<section class="card"><div class="label">Batterie du nœud</div><div id="battery" class="value">—</div></section>
-<section class="card"><div class="label">Dernière mesure</div><div id="last" class="value" style="font-size:1.2rem">—</div></section></main>
-<section class="card chart"><strong>Température · dernières 24 h</strong><svg id="plot" viewBox="0 0 700 230" role="img" aria-label="Courbe de température"></svg><p id="range" class="muted"></p></section>
-<script>
-const fmt=(n,unit,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d).replace('.',',')+' '+unit:'—';
-async function refresh(){
- try{
- const response=await fetch('/api/weather',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);
- const data=await response.json(),last=data.latest;
- document.getElementById('status').textContent=last?'Données réelles · nœud '+last.node:'Aucune mesure sur les dernières 24 heures';
- document.getElementById('temp').textContent=last?fmt(last.temperature,'°C'):'—';
- document.getElementById('battery').textContent=last?fmt(last.voltage,'V',2):'—';
- document.getElementById('last').textContent=last?new Date(last.time).toLocaleString('fr-FR'):'—';
- const pts=data.history.filter(p=>p.temperature!==null&&Number.isFinite(Number(p.temperature))).map(p=>({t:new Date(p.time).getTime(),v:Number(p.temperature)})).filter(p=>Number.isFinite(p.t));
- const svg=document.getElementById('plot');svg.replaceChildren();
- if(pts.length<2){document.getElementById('range').textContent='Pas encore assez de points pour tracer une courbe.';return;}
- const min=Math.min(...pts.map(p=>p.v)),max=Math.max(...pts.map(p=>p.v)),t0=pts[0].t,t1=pts[pts.length-1].t;
- const x=p=>25+650*(p.t-t0)/(t1-t0||1),y=p=>200-165*(p.v-min)/(max-min||1);
- const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');
- line.setAttribute('points',pts.map(p=>x(p)+','+y(p)).join(' '));line.setAttribute('fill','none');line.setAttribute('stroke','#6ed8c0');line.setAttribute('stroke-width','3');line.setAttribute('stroke-linejoin','round');svg.append(line);
- document.getElementById('range').textContent='Min '+fmt(min,'°C')+' · Max '+fmt(max,'°C')+' · '+pts.length+' mesures';
- }catch(e){document.getElementById('status').textContent='Erreur de lecture : '+e.message;}
-}
-refresh();setInterval(refresh,60000);
-</script></body></html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#142f2b"><meta name="description" content="Les mesures de votre station MeshCore, à portée de main.">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/png" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/app.css"><title>Météo du Club</title>
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+<div class="app">
+<header><a class="brand" href="/" aria-label="Météo du Club, accueil"><img src="/static/icon.svg" alt="" width="42" height="42"><span>Météo<span class="brand-sub">DU CLUB</span></span></a><button id="install" class="button small" hidden>Installer l’appli <span aria-hidden="true">↗</span></button></header>
+<main>
+<section id="login" class="login panel" hidden>
+<p class="eyebrow">VOTRE STATION, PARTOUT</p><h1>Un œil sur la météo.</h1><p>Connecte-toi pour retrouver les dernières mesures du club.</p>
+<form id="login-form"><label for="password">Mot de passe du tableau de bord</label><input id="password" type="password" autocomplete="current-password" required minlength="16"><button class="button primary" type="submit">Ouvrir le tableau de bord <span aria-hidden="true">↗</span></button></form><p id="login-error" role="alert"></p>
+</section>
+<div id="dashboard">
+<div class="intro"><div><p class="eyebrow">LA STATION MÉTÉO DU CLUB</p><h1>Dehors, en ce moment.</h1><p class="lead">Les mesures du terrain, simplement.</p></div><span id="status" class="status" role="status">Chargement…</span></div>
+<div id="demo" class="notice" hidden><span aria-hidden="true">◉</span><div><strong>Aperçu · relevés du 3 novembre 2026</strong><span>Deux mesures de validation. Cette version de démonstration n’est pas reliée au direct.</span></div></div>
+<div id="error" class="notice error" role="alert" hidden></div>
+<section class="weather-grid" aria-label="Dernières mesures">
+<article class="temperature panel"><div class="card-top"><span class="eyebrow">TEMPÉRATURE</span><svg class="sun" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="20"/><path d="M48 7v10M48 79v10M7 48h10M79 48h10M19 19l7 7M70 70l7 7M19 77l7-7M70 26l7-7"/></svg></div><div class="hero-value"><span id="temperature">—</span><span class="degree">°C</span></div><div class="temp-bottom"><span>Air ambiant <span class="quiet">· BME280</span></span><span id="temp-range" class="quiet">En attente de mesures</span></div></article>
+<article class="metric panel"><div class="metric-title"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C13 8 7 14 7 20a9 9 0 0 0 18 0C25 14 19 8 16 3Z"/><path d="M12 21a4 4 0 0 0 4 4"/></svg><h2>Humidité</h2></div><p class="metric-value"><span id="humidity">—</span><span class="unit">%</span></p><p class="caption">Humidité relative de l’air</p></article>
+<article class="metric panel"><div class="metric-title"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 24a13 13 0 1 1 22 0M16 4v4M5 10l3 3M27 10l-3 3M16 21l7-9"/><circle cx="16" cy="21" r="2"/></svg><h2>Pression</h2></div><p class="metric-value"><span id="pressure">—</span><span class="unit">hPa</span></p><p class="caption">Pression mesurée à la station</p></article>
+<article class="wind panel"><div class="metric-title"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 11h18a4 4 0 1 0-4-4M3 17h23a4 4 0 1 1-4 4M3 23h9a3 3 0 1 1-3 3"/></svg><h2>Vent</h2><span id="simulated" class="tag" hidden>SIMULÉ</span></div><p class="metric-value"><span id="wind">—</span><span class="unit">m/s</span></p><p id="wind-note" class="caption">En attente de données</p></article>
+</section>
+<section class="history panel" aria-labelledby="history-title"><div class="section-top"><div><p class="eyebrow">AU FIL DES HEURES</p><h2 id="history-title">La température en détail</h2></div><span class="period">24 dernières heures</span></div><div id="chart" class="chart" role="img" aria-label="Historique de température en attente"></div><div class="chart-bottom"><span id="point-count">Aucune mesure</span><span>Heure locale du téléphone</span></div></section>
+<section class="station panel"><div class="station-symbol" aria-hidden="true">⌁</div><div class="station-title"><h2>Station <span id="node">RAK4631-LAB</span></h2><p id="last-seen">Dernier relevé : en attente</p></div><div class="battery"><span class="battery-icon" aria-hidden="true"></span><strong id="voltage">— V</strong><span class="quiet">Batterie</span></div><button id="refresh" class="refresh" aria-label="Actualiser les mesures" title="Actualiser">↻</button></section>
+<section class="install-help"><div><strong>Votre météo, à portée de main.</strong><p>Dans Chrome sur Android : menu ⋮ puis « Ajouter à l’écran d’accueil » ou « Installer l’application ».</p></div><img src="/static/icon-192.png" width="52" height="52" alt="Icône Météo du Club"></section>
+</div>
+</main>
+<footer><span>MÉTÉO DU CLUB <span class="footer-dot">/</span> STATION MESHCORE</span><button id="logout" hidden>Se déconnecter</button><span>Actualisation toutes les 90 s</span></footer>
+</div>
+</body></html>
