@@ -13,6 +13,8 @@ bq --project_id="$PROJECT_ID" add-iam-policy-binding --member="serviceAccount:$S
 for secret_id in weather-dashboard-password weather-dashboard-session; do
   if ! gcloud secrets describe "$secret_id" --project="$PROJECT_ID" >/dev/null 2>&1; then
     gcloud secrets create "$secret_id" --replication-policy=automatic --project="$PROJECT_ID"
+  fi
+  if [[ -z "$(gcloud secrets versions list "$secret_id" --project="$PROJECT_ID" --limit=1 --format='value(name)')" ]]; then
     python3 -c 'import secrets,sys; sys.stdout.write(secrets.token_urlsafe(32))' |
       gcloud secrets versions add "$secret_id" --data-file=- --project="$PROJECT_ID"
   fi
