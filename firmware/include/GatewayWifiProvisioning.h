@@ -4,6 +4,7 @@
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <Preferences.h>
+#include "TelemetryScheduler.h"
 
 namespace gateway_wifi {
 static WebServer portal(80);
@@ -45,27 +46,52 @@ static void startPortal() {
   });
 #ifdef CLOUD_GATEWAY_LAB_UPLINK
   portal.on("/cloud", HTTP_GET, []() {
-    portal.send(200, "text/html", "<form method='POST' action='/cloud/save'>"
-      "HTTPS URL <input name='url'><p>Bearer token <input name='token' type='password'></p>"
-      "<p>CA PEM <textarea name='ca' rows='12' cols='60'></textarea></p>"
-      "<p><label><input name='enabled' type='checkbox' value='1'>Enable</label></p>"
-      "<button>Save</button></form>");
+    Preferences cp;
+    cp.begin("gateway-cloud", true);
+    const String url = cp.getString("url", "");
+    const bool enabled = cp.getBool("enabled", false);
+    const uint32_t minutes = cloud_gateway::pollIntervalMs(cp.getUInt("poll_minutes", cloud_gateway::kDefaultPollMinutes)) / 60000UL;
+    cp.end();
+    String page = "<!doctype html><html lang='fr'><meta name='viewport' content='width=device-width,initial-scale=1'><h2>Configuration GCP</h2><form method='POST' action='/cloud/save'>";
+    page += "<p><label>Endpoint HTTPS <input name='url' required value='" + htmlEscape(url) + "'></label></p>";
+    page += "<p><label>Intervalle de collecte (minutes) <input type='number' name='poll_minutes' min='1' max='1440' required value='" + String(minutes) + "'></label></p>";
+    page += "<p>De 1 a 1440 minutes. Applique apres redemarrage.</p>";
+    page += "<p>Bearer token <input name='token' type='password' autocomplete='new-password'></p><p>Laisser vide pour conserver le token enregistre.</p>";
+    page += "<p>CA PEM <textarea name='ca' rows='12' cols='40'></textarea></p><p>Laisser vide pour conserver le certificat enregistre.</p>";
+    page += "<p><label><input name='enabled' type='checkbox' value='1'";
+    if (enabled) page += " checked";
+    page += ">Activer les envois</label></p><button>Enregistrer</button></form></html>";
+    portal.send(200, "text/html; charset=utf-8", page);
   });
   portal.on("/cloud/save", HTTP_POST, []() {
     String url = portal.arg("url"), secret = portal.arg("token"), ca = portal.arg("ca");
+    const String input_minutes = portal.arg("poll_minutes");
+    uint32_t minutes = cloud_gateway::kDefaultPollMinutes;
+    if (input_minutes.length() && !cloud_gateway::parsePollMinutes(input_minutes.c_str(), minutes)) {
+      portal.send(400, "text/plain", "Interval must be an integer from 1 to 1440 minutes");
+      return;
+    }
+    Preferences cp;
+    if (!cp.begin("gateway-cloud", false)) {
+      portal.send(503, "text/plain", "Configuration storage unavailable");
+      return;
+    }
+    if (!input_minutes.length()) minutes = cloud_gateway::pollIntervalMs(cp.getUInt("poll_minutes", cloud_gateway::kDefaultPollMinutes)) / 60000UL;
+    if (!secret.length()) secret = cp.getString("token", "");
+    if (!ca.length()) ca = cp.getString("ca", "");
     if (!url.startsWith("https://") || !url.endsWith("/v1/telemetry") ||
         url.length() > 220 || secret.length() < 24 || secret.length() > 256 ||
         ca.length() < 500 || ca.length() > 3500 ||
         ca.indexOf("-----BEGIN CERTIFICATE-----") < 0) {
+      cp.end();
       portal.send(400, "text/plain", "Invalid cloud configuration");
       return;
     }
-    Preferences cp;
-    cp.begin("gateway-cloud", false);
     cp.putString("url", url);
     cp.putString("token", secret);
     cp.putString("ca", ca);
     cp.putBool("enabled", portal.arg("enabled") == "1");
+    cp.putUInt("poll_minutes", minutes);
     cp.end();
     portal.send(200, "text/plain", "Saved; reboot gateway to apply.");
   });
@@ -133,6 +159,21 @@ static void begin() {
 }
 
 static void loop() {
+#ifdef PIN_USER_BTN
+  // Hold PRG for 3 s after boot to reopen the LAB portal without erasing settings.
+  static unsigned long button_started = 0;
+  static bool button_handled = false;
+  if (digitalRead(PIN_USER_BTN) == LOW) {
+    if (!button_started) button_started = millis();
+    if (!button_handled && millis() - button_started >= 3000UL) {
+      openSetupPortal();
+      button_handled = true;
+    }
+  } else {
+    button_started = 0;
+    button_handled = false;
+  }
+#endif
   if (manual_setup && millis() - manual_setup_started >= kSetupWindowMs) {
     manual_setup = false;
     if (ap_active) {

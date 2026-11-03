@@ -8,6 +8,25 @@
 
 namespace cloud_gateway {
 
+static constexpr uint32_t kDefaultPollMinutes = 10;
+static constexpr uint32_t kMaxPollMinutes = 1440;
+inline uint32_t pollIntervalMs(uint32_t minutes) {
+  if (minutes < 1 || minutes > kMaxPollMinutes) minutes = kDefaultPollMinutes;
+  return minutes * 60000UL;
+}
+inline bool parsePollMinutes(const char* text, uint32_t& minutes) {
+  if (!text || !*text) return false;
+  uint32_t value = 0;
+  for (const char* p = text; *p; ++p) {
+    if (*p < '0' || *p > '9') return false;
+    value = value * 10 + uint32_t(*p - '0');
+    if (value > kMaxPollMinutes) return false;
+  }
+  if (!value) return false;
+  minutes = value;
+  return true;
+}
+
 struct PollTarget {
   const char* name;
   const uint8_t* public_key;
@@ -18,7 +37,7 @@ enum class PollState : uint8_t { Idle, AwaitingReply };
 
 class TelemetryScheduler {
  public:
-  static constexpr uint32_t kDefaultIntervalMs = 15UL * 60UL * 1000UL;
+  static constexpr uint32_t kDefaultIntervalMs = kDefaultPollMinutes * 60UL * 1000UL;
   static constexpr uint32_t kDefaultTimeoutMs = 30UL * 1000UL;
 
   TelemetryScheduler(const PollTarget* targets, size_t count,
@@ -64,6 +83,12 @@ class TelemetryScheduler {
     // Abort local tracking when an app request takes precedence.
     if (state_ == PollState::AwaitingReply) advance(now_ms);
   }
+
+  void setIntervalMs(uint32_t interval_ms) {
+    if (interval_ms >= 60000UL && interval_ms <= kMaxPollMinutes * 60000UL)
+      interval_ms_ = interval_ms;
+  }
+  uint32_t intervalMs() const { return interval_ms_; }
 
   PollState state() const { return state_; }
   size_t currentIndex() const { return index_; }
