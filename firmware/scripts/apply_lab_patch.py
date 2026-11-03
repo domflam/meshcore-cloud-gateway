@@ -129,6 +129,9 @@ source = replace_once(source, '''void MyMesh::loop() {
   BaseChatMesh::loop();''', '''void MyMesh::loop() {
   BaseChatMesh::loop();
 #ifdef CLOUD_GATEWAY_LAB_POLL
+#ifdef CLOUD_GATEWAY_LAB_UPLINK
+  lab_scheduler_.setIntervalMs(gateway_cloud::poll_interval_ms);
+#endif
   const uint32_t now = millis();
   if (lab_scheduler_.tick(now)) Serial.println("[GATEWAY] GAT562 timeout");
   // Never compete with a phone's outstanding request.

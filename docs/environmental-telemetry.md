@@ -175,3 +175,34 @@ against both the native C++ decoder and the optional Python raw adapter.
 For the already-flashed LAB Heltec with the same partition table, update only
 the application at 0x10000 to preserve NVS credentials and stored contacts.
 Do not flash an application-only image at address 0x0.
+
+## Persistent polling interval (Heltec Wi-Fi LAB)
+
+The gateway stores its HTTPS URL, bearer token, CA and enabled flag in the
+`gateway-cloud` Preferences namespace. Wi-Fi credentials use `gateway-wifi`.
+A normal reset or power cycle preserves these values. Erasing flash/NVS or
+factory-resetting settings does not. The pending measurement queue is RAM-only.
+
+`poll_minutes` is a new unsigned NVS setting. Missing/out-of-range stored values
+fall back to 10 minutes. The `/cloud` form accepts integers from 1 through 1440.
+The scheduler reads the setting after startup; no reflash is needed for later
+interval changes, only save and reboot. The first poll still occurs at startup;
+subsequent cycles wait the configured interval after a reply or timeout.
+
+Hold PRG for three seconds **after the gateway has booted** to open the LAB setup
+AP for ten minutes. Join `MeshCore-Gateway-Setup` and visit
+http://192.168.4.1/cloud. URL, interval and enabled state are prefilled. Tokens
+and certificates are never echoed in HTML: leaving either field empty preserves
+its saved value. First-time setup still requires a valid token and certificate.
+
+Validation: native scheduler tests cover parsing, interval bounds, runtime
+interval changes and millis rollover. Full Heltec compilation must pass before
+flashing. Verify saving, reboot persistence and the physical PRG action on the
+LAB unit; these checks cannot be completed by host-side tests alone.
+The startup log prints `poll_interval_minutes=10` (or the saved selection).
+
+Polling the RAK and refreshing the phone app are separate operations. The PWA
+can check its read API every 90 seconds while new station readings arrive every
+10 minutes. Its original five-minute freshness threshold may label these
+readings old between polls; adapt that presentation threshold to the intended
+collection cadence when updating the dashboard.

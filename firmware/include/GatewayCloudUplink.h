@@ -8,6 +8,7 @@
 #include <HTTPClient.h>
 #include <Preferences.h>
 #include <math.h>
+#include "TelemetryScheduler.h"
 
 namespace gateway_cloud {
 struct Reading {
@@ -24,13 +25,14 @@ static constexpr size_t kCapacity = 16;
 Reading queue[kCapacity];
 size_t head = 0, count = 0;
 uint32_t next_attempt_ms = 0;
+uint32_t poll_interval_ms = cloud_gateway::pollIntervalMs(cloud_gateway::kDefaultPollMinutes);
 uint8_t failures = 0;
 String endpoint, token, ca_pem;
 bool enabled = false, configured = false;
 #else
 extern Reading queue[kCapacity];
 extern size_t head, count;
-extern uint32_t next_attempt_ms;
+extern uint32_t next_attempt_ms, poll_interval_ms;
 extern uint8_t failures;
 extern String endpoint, token, ca_pem;
 extern bool enabled, configured;
@@ -42,12 +44,14 @@ static void begin() {
   token = p.getString("token", "");
   ca_pem = p.getString("ca", "");
   enabled = p.getBool("enabled", false);
+  poll_interval_ms = cloud_gateway::pollIntervalMs(p.getUInt("poll_minutes", cloud_gateway::kDefaultPollMinutes));
   p.end();
   configured = endpoint.startsWith("https://") &&
       endpoint.endsWith("/v1/telemetry") && token.length() >= 24 &&
       ca_pem.indexOf("-----BEGIN CERTIFICATE-----") >= 0;
   Serial.printf("[CLOUD] configured=%s enabled=%s (secrets hidden)\n",
                 configured ? "yes" : "no", enabled ? "yes" : "no");
+  Serial.printf("[CLOUD] poll_interval_minutes=%lu\n", (unsigned long)(poll_interval_ms / 60000UL));
 }
 static bool enqueue(const Reading &reading) {
   if (!reading.event_id.length() || !reading.node_id.length() ||
