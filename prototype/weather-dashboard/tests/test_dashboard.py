@@ -73,6 +73,7 @@ class DashboardTests(unittest.TestCase):
             client.assert_not_called()
         data = response.json
         self.assertEqual(data['mode'], 'demo')
+        self.assertEqual(data['stale_after_minutes'], 30)
         self.assertEqual(data['latest']['temperature_c'], 20.1)
         self.assertEqual(data['latest']['wind_speed_mps'], 0)
         self.assertIs(data['latest']['wind_simulated'], True)

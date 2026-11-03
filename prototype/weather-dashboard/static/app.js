@@ -46,8 +46,9 @@ function freshness(){
   if(lastData.mode==='demo'){status.textContent='Exemple daté';status.classList.add('stale');return;}
   if(!navigator.onLine){status.textContent='Hors ligne';status.classList.add('stale');return;}
   const time=Date.parse(lastData.latest?.observed_at), age=(Date.now()-time)/60000;
-  status.classList.toggle('stale', !Number.isFinite(age)||age>5||age< -5);
-  status.textContent=!lastData.latest?'Aucun relevé depuis 24 h':!Number.isFinite(age)?'Date inconnue':age< -5?'Horloge à vérifier':age>5?'Dernier relevé ancien':'Mesures récentes';
+  const staleAfter=lastData.stale_after_minutes ?? 30;
+  status.classList.toggle('stale', !Number.isFinite(age)||age>staleAfter||age< -5);
+  status.textContent=!lastData.latest?'Aucun relevé depuis 24 h':!Number.isFinite(age)?'Date inconnue':age< -5?'Horloge à vérifier':age>staleAfter?'Dernier relevé ancien':'Mesures récentes';
 }
 function render(data){
   const p=data.latest;

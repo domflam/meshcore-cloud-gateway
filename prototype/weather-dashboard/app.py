@@ -19,6 +19,9 @@ PASSWORD = os.environ.get('DASHBOARD_PASSWORD', '')
 SECRET = os.environ.get('SESSION_SECRET', '')
 TABLE = os.environ.get('BQ_TABLE', 'meshcore-cloud-gateway.meshcore.telemetry')
 NODE = os.environ.get('WEATHER_NODE_ID', 'RAK4631-LAB')
+STALE_AFTER_MINUTES = int(os.environ.get('WEATHER_STALE_AFTER_MINUTES', '30'))
+if not 1 <= STALE_AFTER_MINUTES <= 1440:
+    raise ValueError('WEATHER_STALE_AFTER_MINUTES must be 1..1440')
 if not re.fullmatch(r'[A-Za-z0-9_-]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+', TABLE):
     raise ValueError('Invalid BQ_TABLE')
 app.config.update(SECRET_KEY=SECRET or 'local-demo-only', SESSION_COOKIE_HTTPONLY=True,
@@ -158,6 +161,7 @@ def weather():
             return jsonify(error='Lecture des mesures indisponible. Réessaie dans un instant.'), 503
     return jsonify(mode='demo' if DEMO else 'live', node_id=NODE,
                    latest=points[0] if points else None, history=list(reversed(points)),
+                   stale_after_minutes=STALE_AFTER_MINUTES,
                    fetched_at=datetime.now(timezone.utc).isoformat())
 
 

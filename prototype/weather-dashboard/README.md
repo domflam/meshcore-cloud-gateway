@@ -8,7 +8,8 @@ aucune modification du firmware ni de l’API d’ingestion en fonctionnement.
 
 - BME280 : température, humidité et pression ; batterie en volts, sans pourcentage inventé.
 - Vent : zéro conservé, badge « SIMULÉ » uniquement si le booléen est vrai.
-- Date du relevé en heure locale ; avertissement au-delà de cinq minutes.
+- Date du relevé en heure locale ; avertissement après 30 minutes par défaut (WEATHER_STALE_AFTER_MINUTES, de 1 à 1440).
+  Ce seuil est distinct de la collecte et convient au rythme Heltec de 10 minutes.
 - Quatre courbes sur les dernières 24 h : température, humidité, pression et vent, jusqu’à 300 points.
 - Identité CASLF : logo fourni, nom et icônes Android.
 - Vent simulé en pointillés ; les données manquantes coupent la courbe.
