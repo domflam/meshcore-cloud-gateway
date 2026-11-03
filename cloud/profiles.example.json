@@ -1,5 +1,6 @@
 {
   "RAK4631-LAB": {
+    "trailing_zero_padding_bytes": 1,
     "1:voltage_v": {"field": "voltage_v"},
     "2:temperature_c": {"field": "temperature_c"},
     "2:humidity_pct": {"field": "humidity_pct"},

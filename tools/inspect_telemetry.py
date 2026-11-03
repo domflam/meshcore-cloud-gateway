@@ -11,6 +11,7 @@ TYPES = {
     0x68: ("humidity_pct", 1, 0.5, False),
     0x73: ("barometer_hpa", 2, 0.1, False),
     0x74: ("voltage_v", 2, 0.01, False),
+    0x79: ("altitude_m", 2, 1, True),
     0x78: ("percentage_pct", 1, 1, False),
 }
 

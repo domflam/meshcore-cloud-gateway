@@ -28,7 +28,7 @@ upload of the frame. `tools/inspect_telemetry.py` remains a diagnostic tool that
 returns decoded prefixes plus unparsed suffixes (including the old GAT562
 capture's suffix); it does not certify a frame for ingestion. The default
 GAT562 profile explicitly allows the four zero padding bytes of that validated
-capture; the RAK profile does not. The optional raw adapter uses the same
+capture; the RAK profile explicitly allows the single terminal zero observed in its real capture. The optional raw adapter uses the same
 per-profile allowance. Other unknown suffixes are rejected.
 
 ## Select the actual polling target
@@ -157,3 +157,21 @@ this upstream revision. The Wi-Fi setup patch replaces upstream credential
 initialization with the gateway NVS portal and disables the competing upstream
 reconnect loop; the Companion TCP interface remains available. Radio reception,
 TCP connectivity and Wi-Fi reconnection still require physical LAB validation.
+
+## RAK4631 hardware capture (2026-11-03)
+
+`01740198026700c7026876027327b70279ffe303020000016700e600`
+
+This radio reply contains 4.08 V (channel 1), BME280 temperature 19.9 °C,
+humidity 59 %, pressure 1016.7 hPa (channel 2), altitude -29 m (type 0x79,
+channel 2), virtual wind 0 m/s (channel 3), and internal temperature 23 °C
+(channel 1), followed by a single zero byte. Altitude is a known signed two-byte
+LPP type and is skipped for cloud storage. Internal temperature must not
+replace the BME280 temperature. The final zero is accepted only by the explicitly
+configured RAK framing allowance; this does not permit arbitrary unknown
+suffixes, extra zero bytes or truncated records. A capture regression runs
+against both the native C++ decoder and the optional Python raw adapter.
+
+For the already-flashed LAB Heltec with the same partition table, update only
+the application at 0x10000 to preserve NVS credentials and stored contacts.
+Do not flash an application-only image at address 0x0.

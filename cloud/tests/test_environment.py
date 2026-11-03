@@ -33,6 +33,18 @@ class EnvironmentalTests(unittest.TestCase):
             self.assertEqual(inserted.args[1][0]['wind_simulated'], True)
             self.assertEqual(inserted.kwargs['row_ids'], ['rak-001'])
 
+    def test_actual_rak_capture(self):
+        raw = '01740198026700c7026876027327b70279ffe303020000016700e600'
+        row = from_mqtt(dict(META, lpp_hex=raw), PROFILES)
+        self.assertEqual(row['temperature_c'], 19.9)
+        self.assertEqual(row['humidity_pct'], 59)
+        self.assertEqual(row['pressure_hpa'], 1016.7)
+        self.assertEqual(row['wind_speed_mps'], 0)
+        self.assertIs(row['wind_simulated'], True)
+        for invalid in (raw[:-2]+'01', raw+'00', raw.replace('0279ffe3', '02ffffe3')):
+            with self.subTest(raw=invalid), self.assertRaises(ValueError):
+                from_mqtt(dict(META, lpp_hex=invalid), PROFILES)
+
     def test_channels_are_per_node(self):
         profiles = {'other': {'9:temperature_c': {'field': 'temperature_c'},
                               '8:analog_input': {'field': 'wind_speed_mps', 'simulated': False}}}

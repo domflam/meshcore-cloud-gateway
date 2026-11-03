@@ -78,6 +78,10 @@ source = replace_once(source, '''  memcpy(&tag, data, 4);
     if (decoded.has_temperature) {
       Serial.printf("[GATEWAY] GAT562 temperature=%.1f C\\n", decoded.temperature_c);
     }
+    Serial.printf("[GATEWAY] decode_valid=%s humidity=%.1f pressure=%.1f wind=%.2f simulated=%s\\n",
+                  decoded.valid ? "yes" : "no", decoded.humidity_pct,
+                  decoded.pressure_hpa, decoded.wind_speed_mps,
+                  decoded.wind_simulated ? "yes" : "no");
     if (decoded.parsed_bytes != size_t(len - 4)) {
       Serial.printf("[GATEWAY] GAT562 undecoded_bytes=%u\\n",
                     (unsigned)(size_t(len - 4) - decoded.parsed_bytes));

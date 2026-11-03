@@ -15,7 +15,7 @@ inline TelemetryProfile rak4631SimulatedWindProfile() {
   p.temperature_channel = p.humidity_channel = p.pressure_channel = 2;
   p.wind_channel = 3;
   p.wind_simulated = true;
-  p.trailing_zero_padding_bytes = 0;
+  p.trailing_zero_padding_bytes = 1; // Observed RAK4631 response terminator.
   return p;
 }
 struct TelemetryValues {
@@ -31,19 +31,20 @@ inline TelemetryValues decodeTelemetry(const uint8_t* bytes, size_t length,
   TelemetryValues r;
   if (!bytes) { r.valid = length == 0; return r; }
   size_t pos = 0;
-  while (pos + 2 <= length) {
-    // An explicit legacy framing allowance, never a generic unknown-type skip.
+  while (pos < length) {
+    // Explicit per-profile framing allowance, never a generic unknown-type skip.
     if (profile.trailing_zero_padding_bytes &&
         length - pos == profile.trailing_zero_padding_bytes) {
       bool zeros = true;
       for (size_t i = pos; i < length; ++i) zeros = zeros && bytes[i] == 0;
       if (zeros) { pos = length; break; }
     }
+    if (length - pos < 2) break;
     const uint8_t channel = bytes[pos], type = bytes[pos + 1];
     size_t size;
     switch (type) {
       case 0x68: case 0x78: size = 1; break;
-      case 0x02: case 0x67: case 0x73: case 0x74: size = 2; break;
+      case 0x02: case 0x67: case 0x73: case 0x74: case 0x79: size = 2; break;
       default: r.valid = false; r.parsed_bytes = pos; return r;
     }
     if (pos + 2 + size > length) break;

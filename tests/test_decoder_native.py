@@ -20,6 +20,15 @@ class DecoderTests(unittest.TestCase):
 #include <cmath>
 using namespace cloud_gateway;
 int main() {
+  uint8_t captured[] = {1,0x74,1,0x98,2,0x67,0,0xc7,2,0x68,0x76,
+      2,0x73,0x27,0xb7,2,0x79,0xff,0xe3,3,2,0,0,1,0x67,0,0xe6,0};
+  auto actual = decodeTelemetry(captured,sizeof captured,rak4631SimulatedWindProfile());
+  assert(actual.valid && actual.parsed_bytes == sizeof captured);
+  assert(actual.has_wind && actual.wind_speed_mps == 0 && actual.wind_simulated);
+  assert(std::fabs(actual.temperature_c - 19.9f) < .01f);
+  assert(actual.humidity_pct == 59 && std::fabs(actual.pressure_hpa - 1016.7f) < .01f);
+  captured[sizeof(captured)-1] = 1;
+  assert(!decodeTelemetry(captured,sizeof captured,rak4631SimulatedWindProfile()).valid);
   uint8_t raw[] = {1,0x74,1,0x9b, 2,0x67,0xff,0x9c, 2,0x68,100,
                    2,0x73,0x27,0x94, 3,2,0,0};
   auto p = rak4631SimulatedWindProfile();
