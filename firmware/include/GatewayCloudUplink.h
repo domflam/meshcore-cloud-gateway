@@ -14,6 +14,9 @@ struct Reading {
   String event_id, node_id, observed_at;
   bool has_voltage = false, has_temperature = false;
   float voltage_v = 0, temperature_c = 0;
+  bool has_humidity = false, has_pressure = false, has_wind = false;
+  bool wind_simulated = false;
+  float humidity_pct = 0, pressure_hpa = 0, wind_speed_mps = 0;
 };
 static constexpr size_t kCapacity = 16;
 // Shared storage: defined once in main.cpp, referenced from MyMesh.cpp.
@@ -49,7 +52,8 @@ static void begin() {
 static bool enqueue(const Reading &reading) {
   if (!reading.event_id.length() || !reading.node_id.length() ||
       !reading.observed_at.length() ||
-      (!reading.has_voltage && !reading.has_temperature)) return false;
+      (!reading.has_voltage && !reading.has_temperature &&
+       !reading.has_humidity && !reading.has_pressure && !reading.has_wind)) return false;
   if (count == kCapacity) {
     Serial.println("[CLOUD] queue full: newest reading dropped");
     return false;
@@ -82,6 +86,14 @@ static void loop() {
       json += ",\"voltage_v\":" + String(r.voltage_v, 3);
     if (r.has_temperature && isfinite(r.temperature_c))
       json += ",\"temperature_c\":" + String(r.temperature_c, 2);
+    if (r.has_humidity && isfinite(r.humidity_pct))
+      json += ",\"humidity_pct\":" + String(r.humidity_pct, 1);
+    if (r.has_pressure && isfinite(r.pressure_hpa))
+      json += ",\"pressure_hpa\":" + String(r.pressure_hpa, 1);
+    if (r.has_wind && isfinite(r.wind_speed_mps)) {
+      json += ",\"wind_speed_mps\":" + String(r.wind_speed_mps, 2);
+      json += String(",\"wind_simulated\":") + (r.wind_simulated ? "true" : "false");
+    }
     json += ",\"source\":\"meshcore\"}";
     int status = http.POST(json);
     http.end();

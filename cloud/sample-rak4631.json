@@ -1,0 +1,12 @@
+{
+  "event_id": "rak4631-lab-001",
+  "node_id": "RAK4631-LAB",
+  "observed_at": "2026-11-03T12:00:00Z",
+  "voltage_v": 4.11,
+  "temperature_c": -10.0,
+  "humidity_pct": 50.0,
+  "pressure_hpa": 1013.2,
+  "wind_speed_mps": 0.0,
+  "wind_simulated": true,
+  "source": "meshcore"
+}

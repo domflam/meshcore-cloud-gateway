@@ -46,13 +46,25 @@ def normalize(payload):
     }
     if payload.get("source", "meshcore") != "meshcore":
         raise ValueError("unsupported source")
-    for field, low, high in (("voltage_v", 0, 30), ("temperature_c", -100, 150)):
+    for field, low, high in (("voltage_v", 0, 30), ("temperature_c", -100, 150),
+                             ("humidity_pct", 0, 100),
+                             ("pressure_hpa", 0, 2000),
+                             ("wind_speed_mps", 0, 100)):
         val = payload.get(field)
         if val is not None:
             if isinstance(val, bool) or not isinstance(val, (int, float)) or not low <= val <= high:
                 raise ValueError("invalid " + field)
             row[field] = float(val)
-    if row["voltage_v"] is None and row["temperature_c"] is None:
+    simulated = payload.get("wind_simulated")
+    if simulated is not None and not isinstance(simulated, bool):
+        raise ValueError("invalid wind_simulated")
+    if simulated is not None and row.get("wind_speed_mps") is None:
+        raise ValueError("wind_simulated requires wind_speed_mps")
+    if simulated is True and row["wind_speed_mps"] != 0:
+        raise ValueError("simulated wind must be zero")
+    row["wind_simulated"] = simulated
+    if all(row.get(f) is None for f in (
+            "voltage_v", "temperature_c", "humidity_pct", "pressure_hpa", "wind_speed_mps")):
         raise ValueError("at least one measurement required")
     return row
 

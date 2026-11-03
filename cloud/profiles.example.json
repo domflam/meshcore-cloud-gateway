@@ -1,0 +1,15 @@
+{
+  "RAK4631-LAB": {
+    "trailing_zero_padding_bytes": 1,
+    "1:voltage_v": {"field": "voltage_v"},
+    "2:temperature_c": {"field": "temperature_c"},
+    "2:humidity_pct": {"field": "humidity_pct"},
+    "2:barometer_hpa": {"field": "pressure_hpa"},
+    "3:analog_input": {"field": "wind_speed_mps", "simulated": true}
+  },
+  "GAT562-01": {
+    "trailing_zero_padding_bytes": 4,
+    "1:voltage_v": {"field": "voltage_v"},
+    "1:temperature_c": {"field": "temperature_c"}
+  }
+}

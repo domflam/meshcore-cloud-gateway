@@ -4,9 +4,26 @@
 Fails closed if expected upstream anchors have changed.
 """
 from pathlib import Path
-import sys
+import argparse
+import re
 
-root = Path(sys.argv[1])
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("root", type=Path)
+parser.add_argument("--node-id", default="GAT562-01")
+parser.add_argument("--public-key")
+parser.add_argument("--profile", choices=("legacy", "rak-simulated"), default="legacy")
+for measurement in ("voltage", "temperature", "humidity", "pressure", "wind"):
+    parser.add_argument("--" + measurement + "-channel", type=int)
+args = parser.parse_args()
+if args.public_key is None:
+    if args.profile != "legacy" or args.node_id != "GAT562-01":
+        parser.error("a custom node/profile requires an explicit public key")
+    args.public_key = "26b5986ec521b62b9811688513f9a720b5245cd9448f90d4cbe3e0ca23c817ca"
+if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", args.node_id):
+    parser.error("invalid node id")
+if not re.fullmatch(r"[0-9a-fA-F]{64}", args.public_key):
+    parser.error("public key must be 32 bytes of hex")
+root = args.root
 cpp = root / "examples/companion_radio/MyMesh.cpp"
 hdr = root / "examples/companion_radio/MyMesh.h"
 source = cpp.read_text()
@@ -18,7 +35,7 @@ def replace_once(text, old, new, label):
         raise SystemExit(f"{label}: expected one anchor, found {count}")
     return text.replace(old, new, 1)
 
-header = replace_once(header, '#include "AbstractUITask.h"', '#include "AbstractUITask.h"\n#ifdef CLOUD_GATEWAY_LAB_POLL\n#include "TelemetryScheduler.h"\n#include "TelemetryDecoder.h"\n#endif', 'header include')
+header = replace_once(header, '#include "DataStore.h"', '#include "DataStore.h"\n#ifdef CLOUD_GATEWAY_LAB_POLL\n#include "TelemetryScheduler.h"\n#include "TelemetryDecoder.h"\n#endif', 'header include')
 header = replace_once(header, '  DataStore* _store;', '''#ifdef CLOUD_GATEWAY_LAB_POLL
   static const uint8_t kGatPublicKey[32];
   cloud_gateway::PollTarget lab_targets_[1] = {{"GAT562-01", kGatPublicKey, 32}};
@@ -61,12 +78,17 @@ source = replace_once(source, '''  memcpy(&tag, data, 4);
     if (decoded.has_temperature) {
       Serial.printf("[GATEWAY] GAT562 temperature=%.1f C\\n", decoded.temperature_c);
     }
+    Serial.printf("[GATEWAY] decode_valid=%s humidity=%.1f pressure=%.1f wind=%.2f simulated=%s\\n",
+                  decoded.valid ? "yes" : "no", decoded.humidity_pct,
+                  decoded.pressure_hpa, decoded.wind_speed_mps,
+                  decoded.wind_simulated ? "yes" : "no");
     if (decoded.parsed_bytes != size_t(len - 4)) {
       Serial.printf("[GATEWAY] GAT562 undecoded_bytes=%u\\n",
                     (unsigned)(size_t(len - 4) - decoded.parsed_bytes));
     }
 #ifdef CLOUD_GATEWAY_LAB_UPLINK
-    if (decoded.has_voltage || decoded.has_temperature) {
+    if (decoded.valid && (decoded.has_voltage || decoded.has_temperature ||
+                          decoded.has_humidity || decoded.has_pressure || decoded.has_wind)) {
       const time_t utc = time(nullptr);
       if (utc >= 1700000000) {
         struct tm utc_tm;
@@ -83,6 +105,13 @@ source = replace_once(source, '''  memcpy(&tag, data, 4);
         reading.has_temperature = decoded.has_temperature;
         reading.voltage_v = decoded.voltage_v;
         reading.temperature_c = decoded.temperature_c;
+        reading.has_humidity = decoded.has_humidity;
+        reading.has_pressure = decoded.has_pressure;
+        reading.has_wind = decoded.has_wind;
+        reading.humidity_pct = decoded.humidity_pct;
+        reading.pressure_hpa = decoded.pressure_hpa;
+        reading.wind_speed_mps = decoded.wind_speed_mps;
+        reading.wind_simulated = decoded.wind_simulated;
         if (!gateway_cloud::enqueue(reading))
           Serial.println("[CLOUD] Reading not queued");
       } else {
@@ -132,6 +161,27 @@ source = replace_once(source, '''void MyMesh::loop() {
   }
 #endif''', 'loop')
 header = replace_once(header, '#include "TelemetryDecoder.h"', '#include "TelemetryDecoder.h"\n#ifdef CLOUD_GATEWAY_LAB_UPLINK\n#include "GatewayCloudUplink.h"\n#include <time.h>\n#endif', 'cloud include')
+# Bind the chosen profile to the single authenticated polling target.
+profile_lines = ["cloud_gateway::TelemetryProfile profile; "]
+if args.profile == "rak-simulated":
+    profile_lines = ["auto profile = cloud_gateway::rak4631SimulatedWindProfile(); "]
+for measurement in ("voltage", "temperature", "humidity", "pressure", "wind"):
+    channel = getattr(args, measurement + "_channel")
+    if channel is not None:
+        if not -1 <= channel <= 255:
+            parser.error("channel must be -1 or 0..255")
+        profile_lines.append(f"profile.{measurement}_channel = {channel}; ")
+source = source.replace(
+    "const auto decoded = cloud_gateway::decodeTelemetry(data + 4, len - 4);",
+    "".join(profile_lines) + "const auto decoded = cloud_gateway::decodeTelemetry(data + 4, len - 4, profile);")
+key_start = source.index("const uint8_t MyMesh::kGatPublicKey[32] = {")
+key_end = source.index("};", key_start) + 2
+source = source[:key_start] + "const uint8_t MyMesh::kGatPublicKey[32] = {" + ",".join(
+    "0x" + args.public_key[i:i+2] for i in range(0, 64, 2)) + "};" + source[key_end:]
+source = source.replace('"GAT562-01"', '"' + args.node_id + '"')
+header = header.replace('"GAT562-01"', '"' + args.node_id + '"')
+# Keep log labels and event prefixes consistent with the configured identity.
+source = source.replace("GAT562 ", args.node_id + " ").replace('String("gat562-")', 'String("' + args.node_id + '-")')
 cpp.write_text(source)
 hdr.write_text(header)
 print("Applied LAB telemetry patch to", root)

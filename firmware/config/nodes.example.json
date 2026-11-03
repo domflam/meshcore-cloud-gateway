@@ -5,6 +5,12 @@
       "id": "GAT562-01",
       "meshcore_public_key": "26b5986ec521b62b9811688513f9a720b5245cd9448f90d4cbe3e0ca23c817ca",
       "enabled": true
+    },
+    {
+      "id": "RAK4631-LAB",
+      "meshcore_public_key": "9222cc51c4ad973798dab0e1e5d49630948a6e1f0b3576a059774e1d0d53ebb7",
+      "telemetry_profile": "rak-simulated",
+      "enabled": true
     }
   ]
 }

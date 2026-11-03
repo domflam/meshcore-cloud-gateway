@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - 'cloud/**'
+      - 'tools/inspect_telemetry.py'
+      - 'tests/**'
+      - 'firmware/include/TelemetryDecoder.h'
+      - 'firmware/scripts/apply_lab_patch.py'
       - '.github/workflows/cloud-ingestion-tests.yml'
 jobs:
   test:
@@ -15,3 +19,4 @@ jobs:
           python-version: '3.12'
       - run: pip install -r cloud/requirements.txt
       - run: python -m unittest discover -s cloud/tests -v
+      - run: python -m unittest discover -s tests -v

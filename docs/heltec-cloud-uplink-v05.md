@@ -21,11 +21,11 @@
 7. Flash and confirm an actual GAT562 reading in BigQuery.
 
 ## Current code status
-`firmware/include/GatewayCloudUplink.h` is a **fail-closed queue skeleton**.
-It does not transmit and is not yet included by the firmware. Its queue is RAM
-only (lost on reboot), with 16 readings capacity. It deliberately avoids
-claiming retry/durability behavior not implemented yet. No public Cloud Run IAM
-policy or deployed cloud resources have been changed.
+`firmware/include/GatewayCloudUplink.h` provides a LAB HTTPS queue/uplink,
+injected by `apply_lab_patch.py` when CLOUD_GATEWAY_LAB_UPLINK is enabled.
+Its queue holds 16 readings in RAM, lost on reboot. The repository does not
+establish the current deployed state. See [environmental telemetry](environmental-telemetry.md)
+for device-specific profiles, new environmental fields and end-to-end checks.
 
 Do not commit tokens to Git, flash them in published firmware, or disable
 TLS verification. The current Wi-Fi setup AP password is a lab default and
