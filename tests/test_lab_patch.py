@@ -12,7 +12,10 @@ class LabPatchTests(unittest.TestCase):
         for options, node, profile in [([], 'GAT562-01', 'TelemetryProfile profile'),
             (['--node-id', 'RAK4631-LAB', '--public-key', '11'*32,
               '--profile', 'rak-simulated', '--temperature-channel', '9'],
-             'RAK4631-LAB', 'rak4631SimulatedWindProfile()')]:
+             'RAK4631-LAB', 'rak4631SimulatedWindProfile()'),
+            (['--node-id', 'RAK4631-LAB', '--public-key', '11'*32,
+              '--profile', 'rak-real', '--temperature-channel', '9'],
+             'RAK4631-LAB', 'rak4631RealWindProfile()')]:
             with self.subTest(node=node), tempfile.TemporaryDirectory() as tmp:
                 target = Path(tmp) / 'examples/companion_radio'
                 target.mkdir(parents=True)

@@ -10,12 +10,18 @@ struct TelemetryProfile {
   bool wind_simulated = false;
   size_t trailing_zero_padding_bytes = 4; // Validated historical GAT562 capture only.
 };
-inline TelemetryProfile rak4631SimulatedWindProfile() {
+// Explicit trusted profile for this BME280 + reed-anemometer build.
+inline TelemetryProfile rak4631RealWindProfile() {
   TelemetryProfile p;
   p.temperature_channel = p.humidity_channel = p.pressure_channel = 2;
   p.wind_channel = 3;
-  p.wind_simulated = true;
+  p.wind_simulated = false;
   p.trailing_zero_padding_bytes = 1; // Observed RAK4631 response terminator.
+  return p;
+}
+inline TelemetryProfile rak4631SimulatedWindProfile() {
+  auto p = rak4631RealWindProfile();
+  p.wind_simulated = true;
   return p;
 }
 struct TelemetryValues {

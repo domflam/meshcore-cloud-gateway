@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("root", type=Path)
 parser.add_argument("--node-id", default="GAT562-01")
 parser.add_argument("--public-key")
-parser.add_argument("--profile", choices=("legacy", "rak-simulated"), default="legacy")
+parser.add_argument("--profile", choices=("legacy", "rak-simulated", "rak-real"), default="legacy")
 for measurement in ("voltage", "temperature", "humidity", "pressure", "wind"):
     parser.add_argument("--" + measurement + "-channel", type=int)
 args = parser.parse_args()
@@ -166,7 +166,9 @@ source = replace_once(source, '''void MyMesh::loop() {
 header = replace_once(header, '#include "TelemetryDecoder.h"', '#include "TelemetryDecoder.h"\n#ifdef CLOUD_GATEWAY_LAB_UPLINK\n#include "GatewayCloudUplink.h"\n#include <time.h>\n#endif', 'cloud include')
 # Bind the chosen profile to the single authenticated polling target.
 profile_lines = ["cloud_gateway::TelemetryProfile profile; "]
-if args.profile == "rak-simulated":
+if args.profile == "rak-real":
+    profile_lines = ["auto profile = cloud_gateway::rak4631RealWindProfile(); "]
+elif args.profile == "rak-simulated":
     profile_lines = ["auto profile = cloud_gateway::rak4631SimulatedWindProfile(); "]
 for measurement in ("voltage", "temperature", "humidity", "pressure", "wind"):
     channel = getattr(args, measurement + "_channel")
