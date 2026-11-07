@@ -18,10 +18,7 @@ class DashboardTests(unittest.TestCase):
     def setUp(self):
         self.demo = module.DEMO
         module.DEMO = False
-        module.PASSWORD = 'test-dashboard-password'
-        module.SECRET = 'test-session-secret-with-at-least-32-characters'
-        module.app.config.update(TESTING=True, SECRET_KEY=module.SECRET)
-        module._attempts.clear()
+        module.app.config.update(TESTING=True)
         module._cache = None
         module._client = None
         self.client = module.app.test_client()
@@ -29,42 +26,23 @@ class DashboardTests(unittest.TestCase):
     def tearDown(self):
         module.DEMO = self.demo
 
-    def login(self):
-        return self.client.post('/api/login', json={'password': module.PASSWORD},
-                               base_url='https://localhost', headers={'Origin': 'https://localhost'})
-
-    def test_private_and_fail_closed(self):
-        self.assertEqual(self.client.get('/api/weather').status_code, 401)
-        module.SECRET = ''
-        self.assertEqual(self.client.get('/api/weather').status_code, 503)
-
-    def test_login_cookie_origin_and_logout(self):
-        response = self.client.post('/api/login', json={'password': module.PASSWORD}, base_url='https://localhost')
-        self.assertEqual(response.status_code, 403)
-        response = self.login()
-        self.assertEqual(response.status_code, 200)
-        cookie = response.headers['Set-Cookie']
-        for flag in ('HttpOnly', 'Secure', 'SameSite=Strict'):
-            self.assertIn(flag, cookie)
+    def test_public_read_without_cookie_or_secrets(self):
         with patch.object(module, 'read_weather', return_value=[]):
-            result = self.client.get('/api/weather', base_url='https://localhost')
-            self.assertEqual(result.status_code, 200)
-            self.assertIsNone(result.json['latest'])
-        self.client.post('/api/logout', base_url='https://localhost', headers={'Origin': 'https://localhost'})
-        self.assertEqual(self.client.get('/api/weather', base_url='https://localhost').status_code, 401)
-
-    def test_cloud_run_https_proxy_origin(self):
-        response = self.client.post('/api/login', json={'password': module.PASSWORD},
-                   base_url='http://weather.example.test',
-                   headers={'Origin': 'https://weather.example.test', 'X-Forwarded-Proto': 'https'})
+            response = self.client.get('/api/weather', base_url='https://localhost')
         self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json['latest'])
+        self.assertNotIn('Set-Cookie', response.headers)
+        self.assertEqual(response.headers['Cache-Control'], 'no-store')
 
-    def test_bad_password_and_throttling(self):
-        for _ in range(5):
-            response = self.client.post('/api/login', json={'password': 'wrong'},
-                       base_url='https://localhost', headers={'Origin': 'https://localhost'})
-            self.assertEqual(response.status_code, 401)
-        self.assertEqual(self.login().status_code, 429)
+    def test_no_login_or_write_routes(self):
+        for path in ('/api/login', '/api/logout'):
+            self.assertEqual(self.client.post(path, json={}).status_code, 404)
+        self.assertEqual(self.client.post('/api/weather', json={}).status_code, 405)
+        html = self.client.get('/').get_data(as_text=True)
+        self.assertNotIn('id="login"', html)
+        self.assertNotIn('password', html)
+        self.assertIn('id="theme-toggle"', html)
+        self.assertLess(html.index('/static/theme.js'), html.index('/static/app.css'))
 
     def test_demo_has_explicit_mode_and_capture_dates(self):
         module.DEMO = True
@@ -87,7 +65,6 @@ class DashboardTests(unittest.TestCase):
         client = MagicMock()
         client.query.return_value.result.return_value = [row]
         module._client = client
-        self.login()
         first = self.client.get('/api/weather', base_url='https://localhost')
         self.assertEqual(first.status_code, 200)
         self.assertIsNone(first.json['latest']['temperature_c'])
@@ -103,7 +80,6 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(config.query_parameters[0].value, 'RAK4631-LAB')
 
     def test_storage_error_is_sanitized(self):
-        self.login()
         with patch.object(module, 'read_weather', side_effect=RuntimeError('private error detail')):
             response = self.client.get('/api/weather', base_url='https://localhost')
         self.assertEqual(response.status_code, 503)

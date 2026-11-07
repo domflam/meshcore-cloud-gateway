@@ -4,10 +4,10 @@ const number = (value, digits=1) => typeof value === 'number' && Number.isFinite
 let lastData = null, busy = false, deferredInstall;
 const clock = new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit'});
 const CHARTS = [
-  {field:'temperature_c',label:'Température',unit:'°C',color:'#6e8757',padding:.3},
-  {field:'humidity_pct',label:'Humidité',unit:'%',color:'#5e8990',padding:1,floor:0,ceiling:100},
-  {field:'pressure_hpa',label:'Pression',unit:'hPa',color:'#8a7a9b',padding:.5,floor:0},
-  {field:'wind_speed_mps',label:'Vent',unit:'m/s',color:'#8b8054',padding:.3,floor:0}
+  {field:'temperature_c',label:'Température',unit:'°C',color:'var(--chart-temperature)',padding:.3},
+  {field:'humidity_pct',label:'Humidité',unit:'%',color:'var(--chart-humidity)',padding:1,floor:0,ceiling:100},
+  {field:'pressure_hpa',label:'Pression',unit:'hPa',color:'var(--chart-pressure)',padding:.5,floor:0},
+  {field:'wind_speed_mps',label:'Vent',unit:'m/s',color:'var(--chart-wind)',padding:.3,floor:0}
 ];
 function chart(history, config) {
   const model=weatherChartModel(history,config.field,config), pts=model.points;
@@ -26,7 +26,7 @@ function chart(history, config) {
   const x=p=>60+(p.time-model.first)/(model.last-model.first)*(width-75);
   const y=v=>137-(v-model.low)/(model.high-model.low)*110;
   let grid='';
-  for(let i=0;i<3;i++){const v=model.low+(model.high-model.low)*i/2;grid+=`<line x1="60" x2="${width-15}" y1="${y(v)}" y2="${y(v)}" stroke="#e7eadf" stroke-dasharray="3 5"/><text x="2" y="${y(v)+4}">${number(v)}</text>`;}
+  for(let i=0;i<3;i++){const v=model.low+(model.high-model.low)*i/2;grid+=`<line x1="60" x2="${width-15}" y1="${y(v)}" y2="${y(v)}" stroke="var(--chart-grid)" stroke-dasharray="3 5"/><text x="2" y="${y(v)+4}">${number(v)}</text>`;}
   const segments=[];
   for(const point of pts){if(point.breakBefore||!segments.length)segments.push([]);segments.at(-1).push(point);}
   const gradient='area-'+config.field;
@@ -66,31 +66,19 @@ function render(data){
   for(const config of CHARTS)chart(data.history||[],config);
   freshness();
 }
-function showLogin(){
-  lastData=null;
-  $('dashboard').hidden=true;$('login').hidden=false;$('logout').hidden=true;
-  $('password').focus();
-}
 async function refresh(){
   if(busy)return;busy=true;$('refresh').disabled=true;
   try{
     const response=await fetch('/api/weather',{cache:'no-store',credentials:'same-origin'});
-    if(response.status===401){showLogin();return;}
     const data=await response.json();
     if(!response.ok)throw Error(data.error||'Lecture indisponible');
-    lastData=data;$('error').hidden=true;$('login').hidden=true;$('dashboard').hidden=false;
-    $('logout').hidden=data.mode==='demo';render(data);
+    lastData=data;$('error').hidden=true;render(data);
   }catch(e){
     $('error').textContent=lastData?'Actualisation impossible. Les dernières valeurs affichées sont conservées ; vérifie leur date.':e.message;
     $('error').hidden=false;$('status').textContent='Lecture indisponible';$('status').classList.add('stale');
   }finally{busy=false;$('refresh').disabled=false;}
 }
 $('refresh').addEventListener('click',refresh);
-$('login-form').addEventListener('submit',async e=>{
-  e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;
-  try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('password').value})});const data=await r.json();if(!r.ok)throw Error(data.error);$('password').value='';$('login-error').textContent='';await refresh();}catch(e){$('login-error').textContent=e.message;}finally{button.disabled=false;}
-});
-$('logout').addEventListener('click',async()=>{try{const r=await fetch('/api/logout',{method:'POST'});if(!r.ok)throw Error();showLogin();}catch{$('error').textContent='Déconnexion impossible. Réessaie.';$('error').hidden=false;}});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;$('install').hidden=false;});
 $('install').addEventListener('click',async()=>{if(!deferredInstall)return;await deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$('install').hidden=true;});
 window.addEventListener('appinstalled',()=>{$('install').hidden=true;});

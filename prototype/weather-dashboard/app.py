@@ -1,13 +1,11 @@
 """Read-only weather PWA. Separate service/account from telemetry ingestion."""
-import hmac
 import os
 import re
 import threading
 import time
-from collections import defaultdict, deque
 from datetime import datetime, timezone
 
-from flask import Flask, jsonify, render_template, request, session, send_from_directory
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from google.cloud import bigquery
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -15,8 +13,6 @@ app = Flask(__name__)
 # Cloud Run terminates HTTPS at its trusted proxy; preserve the browser Origin.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=0, x_proto=1, x_host=0, x_port=0, x_prefix=0)
 DEMO = os.environ.get('DASHBOARD_DEMO') == '1'
-PASSWORD = os.environ.get('DASHBOARD_PASSWORD', '')
-SECRET = os.environ.get('SESSION_SECRET', '')
 TABLE = os.environ.get('BQ_TABLE', 'meshcore-cloud-gateway.meshcore.telemetry')
 NODE = os.environ.get('WEATHER_NODE_ID', 'RAK4631-LAB')
 STALE_AFTER_MINUTES = int(os.environ.get('WEATHER_STALE_AFTER_MINUTES', '30'))
@@ -24,20 +20,11 @@ if not 1 <= STALE_AFTER_MINUTES <= 1440:
     raise ValueError('WEATHER_STALE_AFTER_MINUTES must be 1..1440')
 if not re.fullmatch(r'[A-Za-z0-9_-]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+', TABLE):
     raise ValueError('Invalid BQ_TABLE')
-app.config.update(SECRET_KEY=SECRET or 'local-demo-only', SESSION_COOKIE_HTTPONLY=True,
-                  SESSION_COOKIE_SECURE=not DEMO, SESSION_COOKIE_SAMESITE='Strict',
-                  PERMANENT_SESSION_LIFETIME=86400, MAX_CONTENT_LENGTH=4096)
+app.config.update(MAX_CONTENT_LENGTH=4096)
 _client = None
 _cache = None
 _cache_at = 0
 _lock = threading.Lock()
-_attempts = defaultdict(deque)
-
-
-def ready():
-    return DEMO or (len(PASSWORD) >= 16 and len(SECRET) >= 32)
-
-
 @app.after_request
 def headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
@@ -70,48 +57,6 @@ def health():
     return jsonify(status='ok')
 
 
-def same_origin():
-    return request.headers.get('Origin') == request.host_url.rstrip('/')
-
-
-@app.post('/api/login')
-def login():
-    if not same_origin():
-        return jsonify(error='Origine non autorisée'), 403
-    if not ready():
-        return jsonify(error='Accès au tableau de bord non configuré'), 503
-    if DEMO:
-        return jsonify(ok=True)
-    # Per-instance LAB throttle; use IAP/edge rate limiting for a wider audience.
-    key = request.remote_addr or 'unknown'
-    now = time.monotonic()
-    with _lock:
-        attempts = _attempts[key]
-        while attempts and now - attempts[0] > 300:
-            attempts.popleft()
-        if len(attempts) >= 5:
-            return jsonify(error='Patiente quelques minutes avant de réessayer'), 429
-        attempts.append(now)
-    data = request.get_json(silent=True) or {}
-    supplied = data.get('password') if isinstance(data, dict) else None
-    if not isinstance(supplied, str) or not hmac.compare_digest(supplied.encode(), PASSWORD.encode()):
-        return jsonify(error='Mot de passe incorrect'), 401
-    with _lock:
-        _attempts.pop(key, None)
-    session.clear()
-    session['reader'] = True
-    session.permanent = True
-    return jsonify(ok=True)
-
-
-@app.post('/api/logout')
-def logout():
-    if not same_origin():
-        return jsonify(error='Origine non autorisée'), 403
-    session.clear()
-    return jsonify(ok=True)
-
-
 def read_weather():
     global _client, _cache, _cache_at
     with _lock:
@@ -142,10 +87,6 @@ def read_weather():
 
 @app.get('/api/weather')
 def weather():
-    if not ready():
-        return jsonify(error='Accès au tableau de bord non configuré'), 503
-    if not DEMO and not session.get('reader'):
-        return jsonify(error='Connexion requise'), 401
     if DEMO:
         points = [dict(event_id=f'capture-{i}', node_id=NODE, observed_at=stamp,
                        voltage_v=4.08, temperature_c=temp, humidity_pct=humidity,

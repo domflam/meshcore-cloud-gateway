@@ -4,6 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#142f2b"><meta name="description" content="Les mesures de votre station MeshCore, à portée de main.">
 <link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/png" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png">
+<script src="/static/theme.js"></script>
 <link rel="stylesheet" href="/static/app.css"><title>Météo CASLF</title>
 <script src="/static/chart-model.js" defer></script>
 <script src="/static/app.js" defer></script>
@@ -12,10 +13,6 @@
 <div class="app">
 <header><a class="brand" href="/" aria-label="Météo CASLF, accueil"><img src="/static/logo-caslf.png" alt="Logo de la Compagnie d’Arc Saint-Leu-la-Forêt" width="60" height="64"><span>Météo<span class="brand-sub">CASLF</span></span></a><button id="install" class="button small" hidden>Installer l’appli <span aria-hidden="true">↗</span></button></header>
 <main>
-<section id="login" class="login panel" hidden>
-<p class="eyebrow">VOTRE STATION, PARTOUT</p><h1>Un œil sur la météo.</h1><p>Connecte-toi pour retrouver les dernières mesures du club.</p>
-<form id="login-form"><label for="password">Mot de passe du tableau de bord</label><input id="password" type="password" autocomplete="current-password" required minlength="16"><button class="button primary" type="submit">Ouvrir le tableau de bord <span aria-hidden="true">↗</span></button></form><p id="login-error" role="alert"></p>
-</section>
 <div id="dashboard">
 <div class="intro"><div><p class="eyebrow">Station météo du terrain de la Chataigneraie</p><h1>Météo en direct</h1><p class="lead">Mesures effectuées sur le terrain</p></div><span id="status" class="status" role="status">Chargement…</span></div>
 <div id="demo" class="notice" hidden><span aria-hidden="true">◉</span><div><strong>Aperçu · relevés du 3 novembre 2026</strong><span>Deux mesures de validation. Cette version de démonstration n’est pas reliée au direct.</span></div></div>
@@ -36,6 +33,6 @@
 <section class="install-help"><div><strong>Votre météo, à portée de main.</strong><p>Dans Chrome sur Android : menu ⋮ puis « Ajouter à l’écran d’accueil » ou « Installer l’application ».</p></div><img src="/static/icon-192.png" width="52" height="52" alt="Icône Météo CASLF"></section>
 </div>
 </main>
-<footer><span>MÉTÉO CASLF <span class="footer-dot">/</span> STATION MESHCORE</span><button id="logout" hidden>Se déconnecter</button><span>Actualisation toutes les 90 s</span></footer>
+<footer><span>MÉTÉO CASLF <span class="footer-dot">/</span> STATION MESHCORE</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Activer le mode sombre" hidden>Mode sombre</button><span>Actualisation toutes les 90 s</span></footer>
 </div>
 </body></html>
