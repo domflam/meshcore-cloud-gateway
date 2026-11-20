@@ -1,5 +1,8 @@
 # Environmental telemetry: HTTPS first, MQTT optional
 
+For the current two-station admin configuration, see [gateway stations](gateway-stations.md).
+The single-target build details below describe the original baseline.
+
 The existing LAB path is MeshCore reply → portable C++ CayenneLPP decoder →
 16-entry RAM queue → verified HTTPS POST `/v1/telemetry` → Flask → BigQuery.
 MQTT is not required. `cloud/mqtt_bridge.py` is an optional external adapter;

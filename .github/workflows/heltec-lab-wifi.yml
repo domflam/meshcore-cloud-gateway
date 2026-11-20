@@ -19,7 +19,7 @@ jobs:
           - target: rak4631
             node_id: RAK4631-LAB
             public_key: 9222cc51c4ad973798dab0e1e5d49630948a6e1f0b3576a059774e1d0d53ebb7
-            profile: rak-simulated
+            profile: rak-real
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
