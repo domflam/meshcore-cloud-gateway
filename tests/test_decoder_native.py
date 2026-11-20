@@ -47,6 +47,25 @@ int main() {
   assert(!decodeTelemetry(raw,sizeof raw,p).valid);
   p.wind_simulated = false;
   assert(decodeTelemetry(raw,sizeof raw,p).valid);
+  auto real = rak4631RealWindProfile();
+  uint8_t wind[] = {3,2,2,0x44}; // 5.80 m/s, measured on the bench
+  auto measured = decodeTelemetry(wind,sizeof wind,real);
+  assert(measured.valid && measured.has_wind && !measured.wind_simulated);
+  assert(std::fabs(measured.wind_speed_mps - 5.8f) < .001f);
+  assert(!decodeTelemetry(wind,sizeof wind,rak4631SimulatedWindProfile()).valid);
+  wind[2] = wind[3] = 0;
+  measured = decodeTelemetry(wind,sizeof wind,real);
+  assert(measured.valid && measured.has_wind && !measured.wind_simulated && measured.wind_speed_mps == 0);
+  wind[0] = 7; real.wind_channel = 7;
+  assert(decodeTelemetry(wind,sizeof wind,real).has_wind);
+  assert(!decodeTelemetry(wind,sizeof wind,rak4631RealWindProfile()).has_wind);
+  wind[2] = wind[3] = 0xff;
+  assert(!decodeTelemetry(wind,sizeof wind,real).valid); // negative wind
+  wind[2] = 0x27; wind[3] = 0x11;
+  assert(!decodeTelemetry(wind,sizeof wind,real).valid); // above 100 m/s
+  uint8_t bme_only[] = {2,0x67,0,200}; // first RAK acquisition window not ready
+  measured = decodeTelemetry(bme_only,sizeof bme_only,rak4631RealWindProfile());
+  assert(measured.valid && measured.has_temperature && !measured.has_wind);
   uint8_t duplicate[] = {1,0x67,0,1,1,0x67,0,2};
   assert(!decodeTelemetry(duplicate,sizeof duplicate).valid);
   uint8_t legacy[] = {1,0x74,1,0x9b,1,0x67,0,0xd4,0,0,0,0};

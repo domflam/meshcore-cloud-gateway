@@ -31,6 +31,9 @@ struct PollTarget {
   const char* name;
   const uint8_t* public_key;
   size_t public_key_size;
+  bool enabled;
+  PollTarget(const char* n = nullptr, const uint8_t* key = nullptr, size_t size = 0, bool on = true)
+      : name(n), public_key(key), public_key_size(size), enabled(on) {}
 };
 
 enum class PollState : uint8_t { Idle, AwaitingReply };
@@ -53,7 +56,13 @@ class TelemetryScheduler {
     if (!due_ && static_cast<uint32_t>(now_ms - last_cycle_ms_) < interval_ms_)
       return nullptr;
     due_ = true;
-    return &targets_[index_];
+    // Disabled or empty slots never block a later active station.
+    for (size_t scanned = 0; scanned < count_; ++scanned) {
+      if (targets_[index_].enabled) return &targets_[index_];
+      advance(now_ms);
+      if (!due_) return nullptr; // full cycle complete, respect the interval
+    }
+    return nullptr;
   }
 
   // Pass the tag returned by MeshCore sendRequest() only after successful send.
@@ -78,6 +87,9 @@ class TelemetryScheduler {
     advance(now_ms);
     return true;
   }
+
+  // Missing contacts and immediate send failures must not starve later slots.
+  void skip(uint32_t now_ms) { if (state_ == PollState::Idle) advance(now_ms); }
 
   void pauseForCompanion(uint32_t now_ms) {
     // Abort local tracking when an app request takes precedence.

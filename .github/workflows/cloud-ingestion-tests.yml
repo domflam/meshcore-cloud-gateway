@@ -6,8 +6,8 @@ on:
       - 'cloud/**'
       - 'tools/inspect_telemetry.py'
       - 'tests/**'
-      - 'firmware/include/TelemetryDecoder.h'
-      - 'firmware/scripts/apply_lab_patch.py'
+      - 'firmware/include/**'
+      - 'firmware/scripts/**'
       - '.github/workflows/cloud-ingestion-tests.yml'
 jobs:
   test:

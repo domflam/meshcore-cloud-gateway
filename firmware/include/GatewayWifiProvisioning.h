@@ -4,6 +4,9 @@
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <Preferences.h>
+#ifdef CLOUD_GATEWAY_LAB_POLL
+#include "GatewayStationPortal.h"
+#endif
 #include "TelemetryScheduler.h"
 
 namespace gateway_wifi {
@@ -38,10 +41,17 @@ static void startPortal() {
     return;
   }
   dns.start(53, "*", WiFi.softAPIP());
+#ifdef CLOUD_GATEWAY_LAB_POLL
+  gateway_station_portal::routes(portal);
+#endif
   portal.on("/", HTTP_GET, []() {
     String page = "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head><body><h2>MeshCore Gateway Wi-Fi</h2><form method='POST' action='/save'><label>SSID <input name='ssid' required maxlength='32'></label><br><label>Password <input type='password' name='pwd' maxlength='63'></label><br><button>Save and connect</button></form><p>Current IP: ";
     page += htmlEscape(WiFi.localIP().toString());
-    page += "</p><p><a href='/cloud'>Cloud uplink setup</a></p></body></html>";
+    page += "</p><p><a href='/cloud'>Cloud uplink setup</a></p>";
+#ifdef CLOUD_GATEWAY_LAB_POLL
+    page += "<p><a href='/stations'>Stations météo (2 emplacements)</a></p>";
+#endif
+    page += "</body></html>";
     portal.send(200, "text/html", page);
   });
 #ifdef CLOUD_GATEWAY_LAB_UPLINK

@@ -1,5 +1,8 @@
 # Environmental telemetry: HTTPS first, MQTT optional
 
+For the current two-station admin configuration, see [gateway stations](gateway-stations.md).
+The single-target build details below describe the original baseline.
+
 The existing LAB path is MeshCore reply → portable C++ CayenneLPP decoder →
 16-entry RAM queue → verified HTTPS POST `/v1/telemetry` → Flask → BigQuery.
 MQTT is not required. `cloud/mqtt_bridge.py` is an optional external adapter;
@@ -206,3 +209,56 @@ can check its read API every 90 seconds while new station readings arrive every
 10 minutes. Its original five-minute freshness threshold may label these
 readings old between polls; adapt that presentation threshold to the intended
 collection cadence when updating the dashboard.
+
+## Physical WH-SP-WS01 anemometer (RAK4631 LAB)
+
+After the RAK has been flashed with the reed-switch acquisition firmware and
+bench-tested on IO1, select `--profile rak-real` in `apply_lab_patch.py`.
+It explicitly binds `rak4631RealWindProfile()` to the supplied public key;
+legacy and `rak-simulated` profiles retain their existing behavior. A zero
+reading from this physical profile is real calm air (`wind_simulated=false`),
+not a simulated reading. No inference is made from a zero value.
+
+For this LAB build only, BME280 is on channel 2 and the real wind measurement
+is CayenneLPP analog input on channel 3, in m/s. The wire format is unchanged.
+Use per-measurement channel overrides for other firmware/sensor arrangements;
+these channels are not universal equipment identities. Negative wind, values
+above 100 m/s, duplicate fields and malformed payloads remain rejected. An
+absent wind field during the RAK's first incomplete sampling window stays
+absent rather than being synthesized as zero.
+
+The authenticated target is RAK4631-LAB, public key
+`9222cc51c4ad973798dab0e1e5d49630948a6e1f0b3576a059774e1d0d53ebb7`.
+The RAK reports the latest completed approximately 10-second mean; changing
+the gateway polling interval does not change that measurement window.
+
+Validation on the existing LAB Heltec:
+
+1. Flash the application-only binary at **0x10000**, with no full erase. This
+   retains the existing partition layout, NVS Wi-Fi/GCP values and contacts.
+2. After reboot, verify `configured=yes enabled=yes` and the saved polling
+   interval (10 minutes if no interval has been saved).
+3. Wait for a valid reply and `decode_valid=yes ... simulated=no`. At rest,
+   wind should be 0.00. To observe rotation, keep the cups moving for at least
+   10 seconds around a scheduled request. Temporarily selecting one-minute
+   polling can simplify the bench test; restore the desired interval afterward.
+4. Verify `[CLOUD] accepted event=...`. Failed HTTPS attempts retain the same
+   queued event for retry; no MQTT broker is required.
+5. In BigQuery, verify a **new** RAK4631-LAB event has `wind_simulated=false`
+   with temperature, humidity and pressure intact. Historical simulated rows
+   correctly retain `true`. Check the latest timestamp, not an old dashboard
+   cache, then verify the newest reading in Météo CASLF.
+
+```sql
+SELECT observed_at, event_id, temperature_c, humidity_pct, pressure_hpa,
+       wind_speed_mps, wind_simulated
+FROM `meshcore-cloud-gateway.meshcore.telemetry`
+WHERE node_id = 'RAK4631-LAB'
+  AND observed_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
+ORDER BY observed_at DESC
+LIMIT 10;
+```
+
+No ingestion API/schema deployment is required: both already support real
+wind. Firmware compilation and host tests do not replace the post-flash radio,
+HTTPS and BigQuery checks above.
